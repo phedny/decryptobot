@@ -15,6 +15,9 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("net.dv8tion:JDA:4.1.1_122")
+    implementation("com.google.api-client:google-api-client:1.30.4")
+    implementation("com.google.oauth-client:google-oauth-client-jetty:1.30.4")
+    implementation("com.google.apis:google-api-services-sheets:v4-rev581-1.25.0")
 }
 
 tasks.withType<KotlinCompile> {
