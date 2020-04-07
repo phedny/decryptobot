@@ -20,6 +20,8 @@ object Settings {
 
 class Launcher(private val token: String) {
 
+    private val sheetsClient = SheetsClient()
+
     fun launch() {
         router().connect()
     }
@@ -30,7 +32,7 @@ class Launcher(private val token: String) {
         .add("decrypto", DecryptoCommand())
         .add("black", BlackCommand())
         .add("white", WhiteCommand())
-        .add("start", StartCommand())
+        .add("start", StartCommand(sheetsClient))
         .add("help", HelpCommand())
         .build()
 
