@@ -98,14 +98,7 @@ class SheetsClient {
         val data = listOf(
             ValueRange()
                 .setRange("B70")
-                .setValues(
-                    listOf(
-                        listOf(opponentSpreadsheetId),
-                        listOf(guildId),
-                        listOf(channelId),
-                        listOf(color)
-                    )
-                ),
+                .setValues(listOf(listOf(opponentSpreadsheetId), listOf(guildId), listOf(channelId), listOf(color))),
             ValueRange()
                 .setRange("G70")
                 .setValues(players.map { listOf(it) }),
