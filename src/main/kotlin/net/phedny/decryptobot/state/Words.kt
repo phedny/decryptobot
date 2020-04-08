@@ -11,11 +11,7 @@ object Words {
         .map { it.toUpperCase() }
 
     fun pickWords(): Pair<List<String>, List<String>> {
-        val words = mutableSetOf<String>()
-        while (words.size < 8) {
-            words.add(dutchWords.random())
-        }
-
-        return Pair(words.take(4), words.drop(4))
+        val words = dutchWords.shuffled()
+        return Pair(words.take(4), words.subList(4, 8))
     }
 }
