@@ -9,7 +9,7 @@ import net.phedny.decryptobot.state.LobbyRepository
 import net.phedny.decryptobot.state.Team
 import net.phedny.decryptobot.state.Words
 
-class StartCommand(private val sheetsClient: SheetsClient) : Command {
+class StartCommand() : Command {
     override fun execute(event: GuildMessageReceivedEvent, prefix:String) {
         val lobby = LobbyRepository.getLobby(event.guild.id, event.channel.id)
 
@@ -17,8 +17,9 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
             event.channel.send("I'm not activated in this channel. Want to prepare a Decrypto team? First activate me using the `!decrypto` command :+1:")
         } else {
             val playersInGame = lobby.blackPlayers.union(lobby.whitePlayers).filter { GameRepository.getGameByPlayerId(it) != null }
-            if (!playersInGame.isEmpty()) {
-                val playersInGameStr = event.message.guild.members.filter { playersInGame.contains(it.id) }.map { it.asMention }.joinToString(" ")
+            if (playersInGame.isNotEmpty()) {
+                val playersInGameStr =
+                    event.message.guild.members.filter { playersInGame.contains(it.id) }.joinToString(" ") { it.asMention }
                 return event.channel.send("This group of players can't start a game, as the following players are already in an active game: $playersInGameStr")
             }
 
@@ -26,8 +27,8 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
             val whitePlayers = event.message.guild.members.filter { lobby.whitePlayers.contains(it.id) }
 
             val channelMessagePrefix = "Let's start a game for you.\n" +
-                    "Black team is formed by ${blackPlayers.map { it.asMention }.joinToString()}\n" +
-                    "White team is formed by ${whitePlayers.map { it.asMention }.joinToString()}\n"
+                    "Black team is formed by ${blackPlayers.joinToString { it.asMention }}\n" +
+                    "White team is formed by ${whitePlayers.joinToString { it.asMention }}\n"
             var channelMessageId: String? = null
             var spreadsheetsFinished: Boolean = false
             event.channel.sendMessage(channelMessagePrefix + "Please give me half a minute to pick the random keywords and prepare the Google spreadsheet... :hammer_pick:")
@@ -39,11 +40,11 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
                 }
 
             val (blackWords, whiteWords) = Words.pickWords()
-            val blackSpreadsheetId = sheetsClient.initializeNewSpreadsheet()
-            val whiteSpreadsheetId = sheetsClient.initializeNewSpreadsheet()
+            val blackSpreadsheetId = SheetsClient.initializeNewSpreadsheet()
+            val whiteSpreadsheetId = SheetsClient.initializeNewSpreadsheet()
 
-            sheetsClient.writeGameInfo(blackSpreadsheetId, whiteSpreadsheetId, event.guild.id, event.channel.id, "BLACK", lobby.blackPlayers, blackWords)
-            sheetsClient.writeGameInfo(whiteSpreadsheetId, blackSpreadsheetId, event.guild.id, event.channel.id, "WHITE", lobby.whitePlayers, whiteWords)
+            SheetsClient.writeGameInfo(blackSpreadsheetId, whiteSpreadsheetId, event.guild.id, event.channel.id, "BLACK", lobby.blackPlayers, blackWords)
+            SheetsClient.writeGameInfo(whiteSpreadsheetId, blackSpreadsheetId, event.guild.id, event.channel.id, "WHITE", lobby.whitePlayers, whiteWords)
 
             blackPlayers.forEach {
                 it.send("Welcome to the black team. You can find the spreadsheet at https://docs.google.com/spreadsheets/d/$blackSpreadsheetId\n" +

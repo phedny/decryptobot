@@ -6,7 +6,7 @@ import net.phedny.decryptobot.command.PrivateMessageCommand
 import net.phedny.decryptobot.extensions.send
 import net.phedny.decryptobot.state.GameRepository
 
-class HintsReadyCommand(private val sheetsClient: SheetsClient): PrivateMessageCommand {
+class HintsReadyCommand(): PrivateMessageCommand {
     override fun execute(event: PrivateMessageReceivedEvent, prefix:String) {
         val game = GameRepository.getGameByPlayerId(event.author.id)
             ?: return event.channel.send("I'm not aware of an active Decrypto game you're playing. :worried:\n" +
@@ -17,7 +17,7 @@ class HintsReadyCommand(private val sheetsClient: SheetsClient): PrivateMessageC
         val (team, otherTeam) = game.getTeams(event.author.id)
         val round = team.rounds.last()
 
-        val hints = sheetsClient.readHints(team.spreadsheetId, game.getTeamColor(event.author.id).name, team.rounds.size)
+        val hints = SheetsClient.readHints(team.spreadsheetId, game.getTeamColor(event.author.id).name, team.rounds.size)
 
         val (newGame, message) = when {
             team.acceptsEncryptor                           -> Pair(game, "Wow, wow, not so fast. Your team has no encryptor, yet. Pick up that role by sending me the `!encrypt` command first.")
@@ -31,8 +31,8 @@ class HintsReadyCommand(private val sheetsClient: SheetsClient): PrivateMessageC
         GameRepository.updateGame(newGame)
         if (game != newGame) {
             val teamColor = game.getTeamColor(event.author.id)
-            sheetsClient.writeHints(team.spreadsheetId, teamColor.name, team.rounds.size, hints)
-            sheetsClient.writeHints(otherTeam.spreadsheetId, teamColor.name, team.rounds.size, hints)
+            SheetsClient.writeHints(team.spreadsheetId, teamColor.name, team.rounds.size, hints)
+            SheetsClient.writeHints(otherTeam.spreadsheetId, teamColor.name, team.rounds.size, hints)
 
             val hintsAsString = hints.map { "- $it" }.joinToString("\n")
             val guildMembers = event.author.mutualGuilds.first { it.id == game.guildId }.members

@@ -22,6 +22,7 @@ class HelpCommand:Command {
                 "   a. Fill them in the spreadsheet yourself. When done, send me the `!hintsReady` command in private.\n" +
                 "   b. Privately send me the three hints, by using the `!hint` command three times to provide the three hints in the order of the digits in the secret code.\n" +
                 "   c. To send the hints in another order, use the `!hint1`, `!hint2` and `!hint3` commands.\n" +
+                "   d. To send the hints all in one go, use the `!hints` command and send me three hints. The hints can be either comma-separated or whitespace-separated (if you only have one-word hints).\n" +
                 "3. After you sent me the `!hintsReady` command or provided three hints with methods b or c, I will communicate the hints to your team members and to the other team.\n" +
                 "Next up is guessing the secret codes. Communicate with your team to figure out the codes and let me know about your guesses in one of two ways:\n" +
                 "a. Fill in the guesses in the spreadsheet in the column marked with a question mark. When done, one player in your team sends me the `!guessesReady` command in private.\n" +

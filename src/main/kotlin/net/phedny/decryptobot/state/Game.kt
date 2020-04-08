@@ -90,6 +90,8 @@ data class Round(
     val finished: Boolean
             get() = !acceptsHints && !acceptsGuesses
 
+    fun nextHintIndex() = hints.indexOfFirst { it.isNullOrBlank() }
+
     fun withEncryptor(playerId: String): Round {
         if (!acceptsEncryptor) {
             throw IllegalStateException("Round does not accept an encryptor")

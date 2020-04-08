@@ -6,7 +6,7 @@ import net.phedny.decryptobot.command.PrivateMessageCommand
 import net.phedny.decryptobot.extensions.send
 import net.phedny.decryptobot.state.GameRepository
 
-class EncryptCommand(val sheetsClient: SheetsClient): PrivateMessageCommand {
+class EncryptCommand(): PrivateMessageCommand {
     override fun execute(event: PrivateMessageReceivedEvent, prefix:String) {
         val game = GameRepository.getGameByPlayerId(event.author.id)
             ?: return event.channel.send("I'm not aware of an active Decrypto game you're playing. :worried:\n" +
@@ -26,7 +26,7 @@ class EncryptCommand(val sheetsClient: SheetsClient): PrivateMessageCommand {
 
         if (game != newGame) {
             GameRepository.updateGame(newGame)
-            sheetsClient.writeEncryptorData(team.spreadsheetId, event.author.id, round.answer)
+            SheetsClient.writeEncryptorData(team.spreadsheetId, event.author.id, round.answer)
         }
 
         event.channel.send(message)

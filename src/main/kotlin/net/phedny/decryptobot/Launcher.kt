@@ -23,9 +23,8 @@ object Settings {
 
 class Launcher(private val token: String) {
 
-    private val sheetsClient = SheetsClient()
-
     fun launch() {
+        SheetsClient.checkTemplateExistence()
         router().connect()
     }
 
@@ -38,12 +37,12 @@ class Launcher(private val token: String) {
         .add("decrypto", DecryptoCommand())
         .add("black", BlackCommand())
         .add("white", WhiteCommand())
-        .add("start", StartCommand(sheetsClient))
+        .add("start", StartCommand())
 
             // Game commands
-        .add("encrypt", EncryptCommand(sheetsClient))
-        .add("hintsReady", HintsReadyCommand(sheetsClient))
-        .add("hint", HintCommand(sheetsClient))
+        .add("encrypt", EncryptCommand())
+        .add("hintsReady", HintsReadyCommand())
+        .add("hint", HintCommand())
 
         .build()
 

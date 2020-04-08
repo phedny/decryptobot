@@ -5,8 +5,9 @@ import net.phedny.decryptobot.SheetsClient
 import net.phedny.decryptobot.command.PrivateMessageCommand
 import net.phedny.decryptobot.extensions.send
 import net.phedny.decryptobot.state.GameRepository
+import java.lang.IllegalStateException
 
-class HintCommand(private val sheetsClient: SheetsClient): PrivateMessageCommand {
+class HintCommand(): PrivateMessageCommand {
     override fun execute(event: PrivateMessageReceivedEvent, prefix:String) {
         val game = GameRepository.getGameByPlayerId(event.author.id)
             ?: return event.channel.send("I'm not aware of an active Decrypto game you're playing. :worried:\n" +
@@ -17,27 +18,52 @@ class HintCommand(private val sheetsClient: SheetsClient): PrivateMessageCommand
         val round = team.rounds.last()
 
         val suffix = event.message.contentRaw.removePrefix(prefix)
-        val (hintIndex, hint) = when(suffix.first()) {
-            ' '         -> Pair(round.hints.indexOfFirst { it.isNullOrBlank() }, suffix.trim())
-            in '1'..'4' -> Pair(suffix.first() - '1', suffix.drop(1).trim())
+        val hintIndex = when(suffix.first()) {
+            ' '         -> round.nextHintIndex()
+            in '1'..'4' -> suffix.first() - '1'
+            's'         -> null
             else        -> return
         }
-        val newRound = round.withHint(hintIndex, hint)
+        var newRound = round
+        var newGame = game
+        if (hintIndex != null && team.acceptsHints) {
+            val hint = when(suffix.first()) {
+                ' '         -> suffix.trim()
+                in '1'..'4' -> suffix.drop(1).trim()
+                else -> throw IllegalStateException()
+            }
+            newRound = round.withHint(hintIndex, hint)
+            if (team.acceptsHints) {
+                newGame = game.withHint(event.author.id, hintIndex, hint)
+            }
+        } else if (hintIndex == null) {
+            val hints = suffix.drop(1).trim()
+            val hintsList = if (hints.contains(",")) hints.split(Regex(",\\s*")) else hints.split(Regex("\\s+"))
+            if (hintsList.size >= 3) {
+                newRound = newRound.withHints(hintsList.take(3))
+                if (team.acceptsHints) {
+                    newGame = game.withHints(event.author.id, hintsList.take(3))
+                }
+            }
+        }
+
         val needMoreHints = newRound.acceptsHints
 
-        val (newGame, message) = when {
-            team.acceptsEncryptor               -> Pair(game, "Wow, wow, not so fast. Your team has no encryptor, yet. Pick up that role by sending me the `!encrypt` command first.")
-            round.encryptor != event.author.id  -> Pair(game, "You're not the encryptor for your team this round, so I can't allow you to set the hints.")
-            team.acceptsHints                   -> Pair(game.withHint(event.author.id, hintIndex, hint), "Thanks for hint #${hintIndex + 1}. ${if (needMoreHints) "What's your next hint?" else "It's time for some guess work! :smile:"}")
-            team.acceptsGuesses                 -> Pair(game, "You've already sent me three hints, so I'm now waiting for guesses to arrive.")
-            else                                -> Pair(game, "Your team has finished this round. Please wait for your opponents to finish... :stopwatch:")
+        val message = when {
+            team.acceptsEncryptor                   -> "Wow, wow, not so fast. Your team has no encryptor, yet. Pick up that role by sending me the `!encrypt` command first."
+            round.encryptor != event.author.id      -> "You're not the encryptor for your team this round, so I can't allow you to set the hints."
+            team.acceptsHints && newRound == round  -> "It seems like you're short on some hints. Either use the `!hints` command and send me three hints or use the `!hint`, `!hint1`, `!hint2`, or `!hint3` command and send me a single hint."
+            team.acceptsHints && hintIndex != null  -> "Thanks for hint #${hintIndex + 1}. ${if (needMoreHints) "What's your next hint?" else "It's time for some guess work! :smile:"}"
+            team.acceptsHints && hintIndex == null  -> "Thanks for the hints. ${if (needMoreHints) "What's your next hint?" else "It's time for some guess work! :smile:"}"
+            team.acceptsGuesses                     -> "You've already sent me three hints, so I'm now waiting for guesses to arrive."
+            else                                    -> "Your team has finished this round. Please wait for your opponents to finish... :stopwatch:"
         }
 
         GameRepository.updateGame(newGame)
         if (game != newGame && !needMoreHints) {
             val teamColor = game.getTeamColor(event.author.id)
-            sheetsClient.writeHints(team.spreadsheetId, teamColor.name, team.rounds.size, newRound.hints)
-            sheetsClient.writeHints(otherTeam.spreadsheetId, teamColor.name, team.rounds.size, newRound.hints)
+            SheetsClient.writeHints(team.spreadsheetId, teamColor.name, team.rounds.size, newRound.hints)
+            SheetsClient.writeHints(otherTeam.spreadsheetId, teamColor.name, team.rounds.size, newRound.hints)
 
             val hintsAsString = newRound.hints.map { "- $it" }.joinToString("\n")
             val guildMembers = event.author.mutualGuilds.first { it.id == game.guildId }.members
