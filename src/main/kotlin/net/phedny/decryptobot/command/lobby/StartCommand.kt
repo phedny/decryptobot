@@ -4,7 +4,9 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent
 import net.phedny.decryptobot.SheetsClient
 import net.phedny.decryptobot.command.Command
 import net.phedny.decryptobot.extensions.send
+import net.phedny.decryptobot.state.GameRepository
 import net.phedny.decryptobot.state.LobbyRepository
+import net.phedny.decryptobot.state.Team
 import net.phedny.decryptobot.state.Words
 
 class StartCommand(private val sheetsClient: SheetsClient) : Command {
@@ -14,6 +16,12 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
         if (lobby == null) {
             event.channel.send("I'm not activated in this channel. Want to prepare a Decrypto team? First activate me using the `!decrypto` command :+1:")
         } else {
+            val playersInGame = lobby.blackPlayers.union(lobby.whitePlayers).filter { GameRepository.getGameByPlayerId(it) != null }
+            if (!playersInGame.isEmpty()) {
+                val playersInGameStr = event.message.guild.members.filter { playersInGame.contains(it.id) }.map { it.asMention }.joinToString(" ")
+                return event.channel.send("This group of players can't start a game, as the following players are already in an active game: $playersInGameStr")
+            }
+
             val blackPlayers = event.message.guild.members.filter { lobby.blackPlayers.contains(it.id) }
             val whitePlayers = event.message.guild.members.filter { lobby.whitePlayers.contains(it.id) }
 
@@ -47,6 +55,9 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
                         "The for secret words for your team are: ${whiteWords.joinToString()}.\n" +
                         "If you're not sure how to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
             }
+
+            GameRepository.newGame(event.guild.id, event.channel.id, Team(blackSpreadsheetId, blackWords, lobby.blackPlayers, emptyList()), Team(whiteSpreadsheetId, whiteWords, lobby.whitePlayers, emptyList()))
+            LobbyRepository.removeLobby(event.guild.id, event.channel.id)
 
             spreadsheetsFinished = true
             if (channelMessageId != null) {

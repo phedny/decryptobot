@@ -16,6 +16,7 @@ import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
 import java.io.*
+import java.lang.IllegalArgumentException
 
 class SheetsClient {
 
@@ -114,7 +115,43 @@ class SheetsClient {
             .setValueInputOption("RAW")
             .setData(data)
 
-        println("Batch update: " + sheetsService.spreadsheets().values().batchUpdate(spreadsheetId, request).execute())
+        println("Write game info: " + sheetsService.spreadsheets().values().batchUpdate(spreadsheetId, request).execute())
+    }
+
+    fun writeEncryptorData(spreadsheetId: String, encryptor: String, answer: List<Int>) {
+        val data = listOf(listOf(encryptor), listOf(answer.joinToString(" ")))
+        println("Write encryptor data: " + sheetsService.spreadsheets().values().update(spreadsheetId, "B74", ValueRange().setValues(data)).setValueInputOption("RAW").execute())
+    }
+
+    fun writeHints(spreadsheetId: String, color: String, round: Int, hints: List<String?>) {
+        println("Write hints: " + sheetsService.spreadsheets().values().update(spreadsheetId, getHintRange(color, round), ValueRange().setValues(hints.map { listOf(it) })).setValueInputOption("RAW").execute())
+    }
+
+    fun readHints(spreadsheetId: String, color: String, round: Int): List<String> {
+        val result = sheetsService.spreadsheets().values().get(spreadsheetId, getHintRange(color, round)).setValueRenderOption("FORMULA").execute()
+        return result.getValues().map { it.first().toString() }
+    }
+
+    private fun getHintRange(color: String, round: Int): String {
+        return when (Pair(color, round)) {
+            Pair("BLACK", 1) -> "M3:M5"
+            Pair("WHITE", 1) -> "B3:B5"
+            Pair("BLACK", 2) -> "M8:M10"
+            Pair("WHITE", 2) -> "B8:B10"
+            Pair("BLACK", 3) -> "M13:M15"
+            Pair("WHITE", 3) -> "B13:B15"
+            Pair("BLACK", 4) -> "M18:M20"
+            Pair("WHITE", 4) -> "B18:B20"
+            Pair("BLACK", 5) -> "R3:R5"
+            Pair("WHITE", 5) -> "G3:G5"
+            Pair("BLACK", 6) -> "R8:R10"
+            Pair("WHITE", 6) -> "G8:G10"
+            Pair("BLACK", 7) -> "R13:R15"
+            Pair("WHITE", 7) -> "G13:G15"
+            Pair("BLACK", 8) -> "R18:R20"
+            Pair("WHITE", 8) -> "G18:G20"
+            else -> throw IllegalArgumentException("No such color or round")
+        }
     }
 
 }
