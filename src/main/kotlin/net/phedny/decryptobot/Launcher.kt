@@ -10,10 +10,7 @@ import net.phedny.decryptobot.command.PrivateAnswerCommand
 import net.phedny.decryptobot.command.game.EncryptCommand
 import net.phedny.decryptobot.command.game.HintCommand
 import net.phedny.decryptobot.command.game.HintsReadyCommand
-import net.phedny.decryptobot.command.lobby.BlackCommand
-import net.phedny.decryptobot.command.lobby.DecryptoCommand
-import net.phedny.decryptobot.command.lobby.StartCommand
-import net.phedny.decryptobot.command.lobby.WhiteCommand
+import net.phedny.decryptobot.command.lobby.*
 import net.phedny.decryptobot.listeners.EventListener
 import net.phedny.decryptobot.router.Router
 
@@ -38,6 +35,7 @@ class Launcher(private val token: String) {
         .add("black", BlackCommand())
         .add("white", WhiteCommand())
         .add("start", StartCommand())
+        .add("continue", ContinueCommand())
 
             // Game commands
         .add("encrypt", EncryptCommand())

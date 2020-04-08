@@ -16,6 +16,8 @@ import com.google.api.services.drive.model.Permission
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
+import net.phedny.decryptobot.state.Game
+import net.phedny.decryptobot.state.Team
 import java.io.*
 import java.lang.IllegalArgumentException
 
@@ -31,6 +33,13 @@ object SheetsClient {
     private val CREDENTIALS_FILE_PATH = "/credentials.json"
     private val TOKENS_DIRECTORY_PATH = "tokens"
     private val TEMPLATE_SPREADSHEET_ID = "1KXP68tPMVIf_Il0RLe55R4xuPmfdfl0B_VUIJ71q4wg"
+
+    private val GENERAL_INFO_RANGE = "B70:B73"
+    private val PLAYER_RANGE = "G70:G139"
+    val SECRETWORDS1_BLACK_RANGE = "M22:N22"
+    val SECRETWORDS2_BLACK_RANGE = "R22:S22"
+    val SECRETWORDS1_WHITE_RANGE = "B22:C22"
+    val SECRETWORDS2_WHITE_RANGE = "G22:H22"
 
     /**
      * Creates an authorized Credential object.
@@ -91,18 +100,14 @@ object SheetsClient {
     }
 
     fun writeGameInfo(spreadsheetId: String, opponentSpreadsheetId: String, guildId: String, channelId: String, color: String, players: List<String>, secretWords: List<String>) {
-        val (codewordsRange1, codewordsRange2) = when(color) {
-            "BLACK" -> Pair("M22", "R22")
-            "WHITE" -> Pair("B22", "G22")
-            else    -> throw IllegalAccessException("Unknown color: $color")
-        }
+        val (codewordsRange1, codewordsRange2) = getSecretWordsRanges(color)
 
         val data = listOf(
             ValueRange()
-                .setRange("B70")
+                .setRange(GENERAL_INFO_RANGE)
                 .setValues(listOf(listOf(opponentSpreadsheetId), listOf(guildId), listOf(channelId), listOf(color))),
             ValueRange()
-                .setRange("G70")
+                .setRange(PLAYER_RANGE)
                 .setValues(players.map { listOf(it) }),
             ValueRange()
                 .setRange(codewordsRange1)
@@ -119,6 +124,14 @@ object SheetsClient {
         println("Write game info: " + sheetsService.spreadsheets().values().batchUpdate(spreadsheetId, request).execute())
     }
 
+    private fun getSecretWordsRanges(color: String): Pair<String, String> {
+        return when (color) {
+            "BLACK" -> Pair(SECRETWORDS1_BLACK_RANGE, SECRETWORDS2_BLACK_RANGE)
+            "WHITE" -> Pair(SECRETWORDS1_WHITE_RANGE, SECRETWORDS2_WHITE_RANGE)
+            else -> throw IllegalAccessException("Unknown color: $color")
+        }
+    }
+
     fun writeEncryptorData(spreadsheetId: String, encryptor: String, answer: List<Int>) {
         val data = listOf(listOf(encryptor), listOf(answer.joinToString(" ")))
         println("Write encryptor data: " + sheetsService.spreadsheets().values().update(spreadsheetId, "B74", ValueRange().setValues(data)).setValueInputOption("RAW").execute())
@@ -126,6 +139,23 @@ object SheetsClient {
 
     fun writeHints(spreadsheetId: String, color: String, round: Int, hints: List<String?>) {
         println("Write hints: " + sheetsService.spreadsheets().values().update(spreadsheetId, getHintRange(color, round), ValueRange().setValues(hints.map { listOf(it) })).setValueInputOption("RAW").execute())
+    }
+
+    fun readGeneralInfo(spreadsheetId: String): List<String> {
+        val result = sheetsService.spreadsheets().values().get(spreadsheetId, GENERAL_INFO_RANGE).setValueRenderOption("FORMULA").execute()
+        println("gameinfo: " + result.getValues().map { it.first().toString() })
+        return result.getValues().map { it.first().toString() }
+    }
+
+    fun readTeam(spreadsheetId: String, color: String): Team? {
+        val (secretwordsRange1, secretwordsRange2) = getSecretWordsRanges(color)
+        val secretWords1 = sheetsService.spreadsheets().values().get(spreadsheetId, secretwordsRange1).setValueRenderOption("FORMULA").execute()
+        val secretWords2 = sheetsService.spreadsheets().values().get(spreadsheetId, secretwordsRange2).setValueRenderOption("FORMULA").execute()
+        println("secretWords: " + secretWords1.getValues().plus(secretWords2.getValues()).flatMap { values -> values.map { it.toString().replaceFirst(Regex("\uD83D\uDD11 \\d -- "),"") } })
+        val players = sheetsService.spreadsheets().values().get(spreadsheetId, PLAYER_RANGE).setValueRenderOption("FORMULA").execute()
+        println("players: " + players.getValues().map { it.first().toString() })
+        val rounds = null
+        return null
     }
 
     fun readHints(spreadsheetId: String, color: String, round: Int): List<String> {
@@ -161,6 +191,19 @@ object SheetsClient {
         } catch (e: GoogleJsonResponseException){
             throw IllegalStateException("Template spreadsheet is missing.", e)
         }
+    }
+
+    fun readGameInfo(spreadsheetId: String): Game? {
+        try {
+            sheetsService.spreadsheets().get(spreadsheetId).execute()
+        } catch (e: GoogleJsonResponseException){
+            return null
+        }
+        val (opponentSpreadsheetId, guildId, channelId, color) = readGeneralInfo(spreadsheetId)
+        val white = (if (color == "WHITE") readTeam(spreadsheetId, color) else readTeam(opponentSpreadsheetId, color)) ?: return null
+        val black = (if (color == "BLACK") readTeam(spreadsheetId, color) else readTeam(opponentSpreadsheetId, color)) ?: return null
+        val game = Game(guildId, channelId, black, white)
+        return null
     }
 
 }
