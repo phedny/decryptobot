@@ -22,7 +22,7 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
                     "White team is formed by ${whitePlayers.map { it.asMention }.joinToString()}\n"
             var channelMessageId: String? = null
             var spreadsheetsFinished: Boolean = false
-            event.channel.sendMessage(channelMessagePrefix + "Please give me a moment to pick the random keywords and prepare the Google spreadsheet... :hammer_pick:")
+            event.channel.sendMessage(channelMessagePrefix + "Please give me half a minute to pick the random keywords and prepare the Google spreadsheet... :hammer_pick:")
                 .queue {
                     channelMessageId = it.id
                     if (spreadsheetsFinished) {
@@ -39,7 +39,7 @@ class StartCommand(private val sheetsClient: SheetsClient) : Command {
 
             blackPlayers.forEach {
                 it.send("Welcome to the black team. You can find the spreadsheet at https://docs.google.com/spreadsheets/d/$blackSpreadsheetId\n" +
-                        "The for secret words for your team are: ${blackWords.joinToString()}")
+                        "The four secret words for your team are: ${blackWords.joinToString()}")
             }
 
             whitePlayers.forEach {
