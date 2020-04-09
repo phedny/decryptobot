@@ -75,6 +75,8 @@ data class Team(
             get() = rounds.count { it.incorrectTeamGuess }
     val correctOpponentGuesses: Int
             get() = rounds.count { it.correctOpponentGuess }
+    val roundNumber: Int
+            get() = rounds.size
 
     fun withNewRound(): Team {
         if (rounds.lastOrNull()?.finished == false) {
@@ -98,7 +100,6 @@ data class Round(
     val teamGuess: List<Int?> = listOf(null, null, null),
     val opponentGuess: List<Int?> = listOf(null, null, null)
 ) {
-
     val acceptsEncryptor: Boolean
             get() = encryptor == null
     val acceptsHints: Boolean

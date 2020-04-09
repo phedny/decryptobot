@@ -26,7 +26,7 @@ class EncryptCommand(): PrivateMessageCommand {
 
         if (game != newGame) {
             GameRepository.updateGame(newGame)
-            SheetsClient.writeEncryptorData(team.spreadsheetId, event.author.id, round.answer)
+            SheetsClient.writeEncryptorData(team.spreadsheetId, event.author.id, round.answer, team.roundNumber)
         }
 
         event.channel.send(message)

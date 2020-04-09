@@ -15,6 +15,7 @@ import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
 import net.phedny.decryptobot.state.Game
+import net.phedny.decryptobot.state.Round
 import net.phedny.decryptobot.state.Team
 import java.io.File
 import java.io.FileNotFoundException
@@ -25,22 +26,15 @@ object SheetsClient {
 
     private val HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport()
     private val JSON_FACTORY = JacksonFactory.getDefaultInstance()
-    private val APPLICATION_NAME = "Decrypto Bot"
+    private const val APPLICATION_NAME = "Decrypto Bot"
 
     /**
      * If modifying these scopes, delete your previously saved tokens/ folder.
      */
     private val SCOPES: List<String> = listOf(DriveScopes.DRIVE_FILE, SheetsScopes.SPREADSHEETS)
-    private val CREDENTIALS_FILE_PATH = "/credentials.json"
-    private val TOKENS_DIRECTORY_PATH = "tokens"
-    private val TEMPLATE_SPREADSHEET_ID = "1KXP68tPMVIf_Il0RLe55R4xuPmfdfl0B_VUIJ71q4wg"
-
-    private val GENERAL_INFO_RANGE = "B70:B73"
-    private val PLAYER_RANGE = "G70:G139"
-    val SECRETWORDS1_BLACK_RANGE = "M22:N22"
-    val SECRETWORDS2_BLACK_RANGE = "R22:S22"
-    val SECRETWORDS1_WHITE_RANGE = "B22:C22"
-    val SECRETWORDS2_WHITE_RANGE = "G22:H22"
+    private const val CREDENTIALS_FILE_PATH = "/credentials.json"
+    private const val TOKENS_DIRECTORY_PATH = "tokens"
+    private const val TEMPLATE_SPREADSHEET_ID = "1KXP68tPMVIf_Il0RLe55R4xuPmfdfl0B_VUIJ71q4wg"
 
     private val credentials = run {
         // Load client secrets.
@@ -60,9 +54,25 @@ object SheetsClient {
     private val driveService = Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()
+
     private val sheetsService = Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()
+
+    fun checkTemplateExistence() {
+        if (!spreadsheetExists(TEMPLATE_SPREADSHEET_ID)) {
+            throw IllegalStateException("Template spreadsheet is missing.")
+        }
+    }
+
+    private fun spreadsheetExists(spreadsheetId: String) : Boolean {
+        return try {
+            sheetsService.spreadsheets().get(spreadsheetId).execute()
+            true
+        } catch (e: GoogleJsonResponseException) {
+            false
+        }
+    }
 
     fun initializeNewSpreadsheet(): String {
         val spreadsheet = Spreadsheet()
@@ -75,7 +85,7 @@ object SheetsClient {
         val copyRequest = CopySheetToAnotherSpreadsheetRequest()
         copyRequest.destinationSpreadsheetId = spreadsheetId
         val copyResult = sheetsService.spreadsheets().sheets().copyTo(TEMPLATE_SPREADSHEET_ID, 0, copyRequest).execute()
-        println("Copy request: " + copyResult)
+        println("Copy request: $copyResult")
 
 
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest()
@@ -90,6 +100,46 @@ object SheetsClient {
         println("Make public request: " + driveService.Permissions().create(spreadsheetId, Permission().setType("anyone").setRole("writer")).execute())
 
         return spreadsheetId
+    }
+
+    private const val GENERAL_INFO_RANGE = "B70:B73"
+    private const val PLAYER_RANGE = "G70:G139"
+    private const val ENCRYPTOR_RANGE = "B74:C81"
+
+    private fun getSecretWordsRanges(color: String): Pair<String, String> {
+        return when (color) {
+            "BLACK" -> Pair("M22:N22", "R22:S22")
+            "WHITE" -> Pair("B22:C22", "G22:H22")
+            else -> throw IllegalAccessException("Unknown color: $color")
+        }
+    }
+
+    private fun getEncryptorRange(round: Int): String {
+        if (round !in 1..8)
+            throw IllegalArgumentException("Roundnumber must be between 1 and 8")
+        return "B${73+round}:C${73+round}"
+    }
+
+    private fun getRoundDataRange(color: String, round: Int): String {
+        return when (Pair(color, round)) {
+            Pair("BLACK", 1) -> "M3:P5"
+            Pair("WHITE", 1) -> "B3:E5"
+            Pair("BLACK", 2) -> "M8:P10"
+            Pair("WHITE", 2) -> "B8:E10"
+            Pair("BLACK", 3) -> "M13:P15"
+            Pair("WHITE", 3) -> "B13:E15"
+            Pair("BLACK", 4) -> "M18:P20"
+            Pair("WHITE", 4) -> "B18:E20"
+            Pair("BLACK", 5) -> "R3:U5"
+            Pair("WHITE", 5) -> "G3:J5"
+            Pair("BLACK", 6) -> "R8:U10"
+            Pair("WHITE", 6) -> "G8:J10"
+            Pair("BLACK", 7) -> "R13:U15"
+            Pair("WHITE", 7) -> "G13:J15"
+            Pair("BLACK", 8) -> "R18:U20"
+            Pair("WHITE", 8) -> "G18:J20"
+            else -> throw IllegalArgumentException("No such color or round")
+        }
     }
 
     fun writeGameInfo(spreadsheetId: String, opponentSpreadsheetId: String, guildId: String, channelId: String, color: String, players: List<String>, secretWords: List<String>) {
@@ -117,17 +167,10 @@ object SheetsClient {
         println("Write game info: " + sheetsService.spreadsheets().values().batchUpdate(spreadsheetId, request).execute())
     }
 
-    private fun getSecretWordsRanges(color: String): Pair<String, String> {
-        return when (color) {
-            "BLACK" -> Pair(SECRETWORDS1_BLACK_RANGE, SECRETWORDS2_BLACK_RANGE)
-            "WHITE" -> Pair(SECRETWORDS1_WHITE_RANGE, SECRETWORDS2_WHITE_RANGE)
-            else -> throw IllegalAccessException("Unknown color: $color")
-        }
-    }
-
-    fun writeEncryptorData(spreadsheetId: String, encryptor: String, answer: List<Int>) {
-        val data = listOf(listOf(encryptor), listOf(answer.joinToString(" ")))
-        println("Write encryptor data: " + sheetsService.spreadsheets().values().update(spreadsheetId, "B74", ValueRange().setValues(data)).setValueInputOption("RAW").execute())
+    fun writeEncryptorData(spreadsheetId: String, encryptor: String, answer: List<Int>, round: Int) {
+        val data = listOf(listOf(encryptor, answer.joinToString(" ")))
+        println("Write encryptor data: " + sheetsService.spreadsheets().values().update(spreadsheetId,
+            getEncryptorRange(round), ValueRange().setValues(data)).setValueInputOption("RAW").execute())
     }
 
     fun writeRound(game: Game, round: Int) {
@@ -165,69 +208,83 @@ object SheetsClient {
         println("Write round data: " + sheetsService.spreadsheets().values().batchUpdate(spreadsheetId, request).execute())
     }
 
-    fun readGeneralInfo(spreadsheetId: String): List<String> {
-        val result = sheetsService.spreadsheets().values().get(spreadsheetId, GENERAL_INFO_RANGE).setValueRenderOption("FORMULA").execute()
-        println("gameinfo: " + result.getValues().map { it.first().toString() })
-        return result.getValues().map { it.first().toString() }
+    fun readGameInfo(spreadsheetId: String): Game? {
+        if (!spreadsheetExists(spreadsheetId)) {
+            return null
+        }
+
+        val ranges = mutableListOf(GENERAL_INFO_RANGE, PLAYER_RANGE, ENCRYPTOR_RANGE)
+        ranges.addAll(getSecretWordsRanges("WHITE").toList())
+        ranges.addAll(getSecretWordsRanges("BLACK").toList())
+        for (i in 1..8) {
+            ranges.add(getRoundDataRange("WHITE", i))
+            ranges.add(getRoundDataRange("BLACK", i))
+        }
+        val valueRanges = readRanges(spreadsheetId,ranges)
+        println(valueRanges)
+
+        val (opponentSpreadsheetId, guildId, channelId, color) = valueRanges.getByRange(GENERAL_INFO_RANGE)?.map { it.first().toString() } ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
+        if (!spreadsheetExists(opponentSpreadsheetId)) {
+            return null
+        }
+        val opponentValueRanges = readRanges(opponentSpreadsheetId,ranges)
+
+        val (black, white) = when (color) {
+            "BLACK" -> Pair(readTeam(valueRanges, opponentValueRanges, spreadsheetId, "BLACK"),readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "WHITE"))
+            "WHITE" -> Pair(readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "BLACK"),readTeam(valueRanges, opponentValueRanges, spreadsheetId, "WHITE"))
+            else -> throw IllegalStateException("Unknown color: $color")
+        }
+
+        return if (black == null || white == null) null else Game(guildId, channelId, black, white)
     }
 
-    fun readTeam(spreadsheetId: String, color: String): Team? {
-        val (secretwordsRange1, secretwordsRange2) = getSecretWordsRanges(color)
-        val secretWords1 = sheetsService.spreadsheets().values().get(spreadsheetId, secretwordsRange1).setValueRenderOption("FORMULA").execute()
-        val secretWords2 = sheetsService.spreadsheets().values().get(spreadsheetId, secretwordsRange2).setValueRenderOption("FORMULA").execute()
-        println("secretWords: " + secretWords1.getValues().plus(secretWords2.getValues()).flatMap { values -> values.map { it.toString().replaceFirst(Regex("\uD83D\uDD11 \\d -- "),"") } })
-        val players = sheetsService.spreadsheets().values().get(spreadsheetId, PLAYER_RANGE).setValueRenderOption("FORMULA").execute()
-        println("players: " + players.getValues().map { it.first().toString() })
-        val rounds = null
-        return null
+    private fun readTeam(valueRanges: List<ValueRange>, opponentValueRanges: List<ValueRange>, spreadsheetId: String, color: String): Team? {
+        val (secretWordsRange1, secretWordsRange2) = getSecretWordsRanges(color)
+        val secretWords1 = valueRanges.getByRange(secretWordsRange1) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
+        val secretWords2 = valueRanges.getByRange(secretWordsRange2) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
+        val secretWords = secretWords1.plus(secretWords2).flatMap { values -> values.map { it.toString().replaceFirst(Regex("\uD83D\uDD11 \\d -- "), "") } }
+        println("secretWords: $secretWords")
+
+        val playersResult = valueRanges.getByRange(PLAYER_RANGE) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
+        val players = playersResult.map { it.first().toString() }
+        println("players: $players")
+
+        val rounds = readRounds(valueRanges, opponentValueRanges, color)
+
+        return Team(spreadsheetId, secretWords, players, rounds)
+    }
+
+    private fun readRounds(valueRanges: List<ValueRange>, opponentValueRanges: List<ValueRange>, color: String): List<Round> {
+        val rounds = mutableListOf<Round>()
+        val encryptorData = valueRanges.getByRange(ENCRYPTOR_RANGE)
+        for (i in 1..8) {
+            val encryptorDataRound = encryptorData?.getOrNull(i - 1) ?: break
+            val encryptor = encryptorDataRound[0].toString()
+            val answer = encryptorDataRound[1].toString().split(" ").map { it.toInt() }
+            println("encryptor round $i: $encryptor")
+            println("answer round $i: $answer")
+
+            val roundData = valueRanges.getByRange(getRoundDataRange(color, i))
+            val hints = roundData?.map { it[0]?.toString() } ?: listOf(null, null, null)
+            val teamGuess = roundData?.map { it.getOrNull(2)?.toString()?.toInt() } ?: listOf(null, null, null)
+            val opponentGuess = opponentValueRanges.getByRange(getRoundDataRange(color, i))?.map { it.getOrNull(2)?.toString()?.toInt() } ?: listOf(null, null, null)
+            println("hints $i: $hints")
+            println("team guess $i: $teamGuess")
+            println("opponent guess $i: $opponentGuess")
+            rounds.add(Round(answer, encryptor, hints, teamGuess, opponentGuess))
+        }
+        return rounds
     }
 
     fun readHints(spreadsheetId: String, color: String, round: Int): List<String> {
-        val result = sheetsService.spreadsheets().values().get(spreadsheetId, getRoundDataRange(color, round)).setValueRenderOption("FORMULA").execute()
-        return result.getValues().map { it.first().toString() }
+        val result = readRange(spreadsheetId, getRoundDataRange(color, round))
+        return result.map { it.first().toString() }
     }
 
-    private fun getRoundDataRange(color: String, round: Int): String {
-        return when (Pair(color, round)) {
-            Pair("BLACK", 1) -> "M3:P5"
-            Pair("WHITE", 1) -> "B3:E5"
-            Pair("BLACK", 2) -> "M8:P10"
-            Pair("WHITE", 2) -> "B8:E10"
-            Pair("BLACK", 3) -> "M13:P15"
-            Pair("WHITE", 3) -> "B13:E15"
-            Pair("BLACK", 4) -> "M18:P20"
-            Pair("WHITE", 4) -> "B18:E20"
-            Pair("BLACK", 5) -> "R3:U5"
-            Pair("WHITE", 5) -> "G3:J5"
-            Pair("BLACK", 6) -> "R8:U10"
-            Pair("WHITE", 6) -> "G8:J10"
-            Pair("BLACK", 7) -> "R13:U15"
-            Pair("WHITE", 7) -> "G13:J15"
-            Pair("BLACK", 8) -> "R18:U20"
-            Pair("WHITE", 8) -> "G18:J20"
-            else -> throw IllegalArgumentException("No such color or round")
-        }
-    }
+    private fun readRange(spreadsheetId: String, range: String) = sheetsService.spreadsheets().values().get(spreadsheetId, range).setValueRenderOption("FORMULA").execute().getValues()
 
-    fun checkTemplateExistence() {
-        try {
-            sheetsService.spreadsheets().get(TEMPLATE_SPREADSHEET_ID).execute()
-        } catch (e: GoogleJsonResponseException){
-            throw IllegalStateException("Template spreadsheet is missing.", e)
-        }
-    }
-
-    fun readGameInfo(spreadsheetId: String): Game? {
-        try {
-            sheetsService.spreadsheets().get(spreadsheetId).execute()
-        } catch (e: GoogleJsonResponseException){
-            return null
-        }
-        val (opponentSpreadsheetId, guildId, channelId, color) = readGeneralInfo(spreadsheetId)
-        val white = (if (color == "WHITE") readTeam(spreadsheetId, color) else readTeam(opponentSpreadsheetId, color)) ?: return null
-        val black = (if (color == "BLACK") readTeam(spreadsheetId, color) else readTeam(opponentSpreadsheetId, color)) ?: return null
-        val game = Game(guildId, channelId, black, white)
-        return null
-    }
+    private fun readRanges(spreadsheetId: String, ranges: List<String>) = sheetsService.spreadsheets().values().batchGet(spreadsheetId).setRanges(ranges).setValueRenderOption("FORMULA").execute().valueRanges
 
 }
+
+private fun List<ValueRange>.getByRange(range: String) = this.find { it.range == "'Decrypto game'!$range" }?.getValues()

@@ -16,7 +16,7 @@ class ContinueCommand() : Command {
         }
         val lobby = LobbyRepository.getLobby(event.guild.id, event.channel.id)!!
 
-        val spreadsheetId = Regex("docs.google.com/spreadsheets/d/(\\w+)").find(event.message.contentRaw)?.groupValues?.get(1)
+        val spreadsheetId = Regex("docs.google.com/spreadsheets/d/([\\w-]+)").find(event.message.contentRaw)?.groupValues?.get(1)
         if (spreadsheetId?.isNotEmpty() == true) {
             val game = SheetsClient.readGameInfo(spreadsheetId)
         }

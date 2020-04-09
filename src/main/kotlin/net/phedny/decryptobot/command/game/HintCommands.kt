@@ -81,7 +81,7 @@ class HintsCommand: BaseHintCommand() {
 
         return when (hintsList.size) {
             in 0..2 -> Pair(game, "It seems like you're short on some hints. Either use the `!hints` command and send me three hints or use the `!hint`, `!hint1`, `!hint2`, or `!hint3` command and send me a single hint.")
-            3       -> Pair(game.withHints(playerId, hintsList.take(3)), "Thanks for the hints. It's time for some guess work! :smile:")
+            3       -> Pair(game.withHints(playerId, hintsList), "Thanks for the hints. It's time for some guess work! :smile:")
             else    -> Pair(game, "Stop, stop, stop! You only need to provide three hints, ${hintsList.size} is a little bit too much. :sweat_smile:")
         }
     }
