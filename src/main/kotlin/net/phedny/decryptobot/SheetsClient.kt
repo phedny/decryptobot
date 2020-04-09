@@ -7,7 +7,6 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
 import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
-import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.jackson2.JacksonFactory
 import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.services.drive.Drive
@@ -23,6 +22,7 @@ import java.lang.IllegalArgumentException
 
 object SheetsClient {
 
+    private val HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport()
     private val JSON_FACTORY = JacksonFactory.getDefaultInstance()
     private val APPLICATION_NAME = "Decrypto Bot"
 
@@ -48,7 +48,7 @@ object SheetsClient {
      * @throws IOException If the credentials.json file cannot be found.
      */
     @Throws(IOException::class)
-    private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential? {
+    private fun getCredentials(): Credential? {
         // Load client secrets.
         val `in`: InputStream = SheetsClient::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
             ?: throw FileNotFoundException("Resource not found: $CREDENTIALS_FILE_PATH")
@@ -63,11 +63,11 @@ object SheetsClient {
         return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }
 
-    private val HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport()
-    private val driveService = Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+    private val credentials = getCredentials()
+    private val driveService = Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()
-    private val sheetsService = Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+    private val sheetsService = Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()
 
