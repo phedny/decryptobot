@@ -7,9 +7,7 @@ import net.phedny.decryptobot.Settings.PREFIX
 import net.phedny.decryptobot.command.AnswerCommand
 import net.phedny.decryptobot.command.HelpCommand
 import net.phedny.decryptobot.command.PrivateAnswerCommand
-import net.phedny.decryptobot.command.game.EncryptCommand
-import net.phedny.decryptobot.command.game.HintCommand
-import net.phedny.decryptobot.command.game.HintsReadyCommand
+import net.phedny.decryptobot.command.game.*
 import net.phedny.decryptobot.command.lobby.*
 import net.phedny.decryptobot.listeners.EventListener
 import net.phedny.decryptobot.router.Router
@@ -40,6 +38,10 @@ class Launcher(private val token: String) {
             // Game commands
         .add("encrypt", EncryptCommand())
         .add("hintsReady", HintsReadyCommand())
+        .add("hint1", HintNCommand(0))
+        .add("hint2", HintNCommand(1))
+        .add("hint3", HintNCommand(2))
+        .add("hints", HintsCommand())
         .add("hint", HintCommand())
 
         .build()
