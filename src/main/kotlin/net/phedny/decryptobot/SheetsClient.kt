@@ -1,6 +1,5 @@
 package net.phedny.decryptobot
 
-import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow
@@ -17,8 +16,10 @@ import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
 import net.phedny.decryptobot.state.Game
 import net.phedny.decryptobot.state.Team
-import java.io.*
-import java.lang.IllegalArgumentException
+import java.io.File
+import java.io.FileNotFoundException
+import java.io.InputStream
+import java.io.InputStreamReader
 
 object SheetsClient {
 
@@ -41,14 +42,7 @@ object SheetsClient {
     val SECRETWORDS1_WHITE_RANGE = "B22:C22"
     val SECRETWORDS2_WHITE_RANGE = "G22:H22"
 
-    /**
-     * Creates an authorized Credential object.
-     * @param HTTP_TRANSPORT The network HTTP Transport.
-     * @return An authorized Credential object.
-     * @throws IOException If the credentials.json file cannot be found.
-     */
-    @Throws(IOException::class)
-    private fun getCredentials(): Credential? {
+    private val credentials = run {
         // Load client secrets.
         val `in`: InputStream = SheetsClient::class.java.getResourceAsStream(CREDENTIALS_FILE_PATH)
             ?: throw FileNotFoundException("Resource not found: $CREDENTIALS_FILE_PATH")
@@ -60,10 +54,9 @@ object SheetsClient {
             .setAccessType("offline")
             .build()
         val receiver: LocalServerReceiver = LocalServerReceiver.Builder().setPort(8888).build()
-        return AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
+        AuthorizationCodeInstalledApp(flow, receiver).authorize("user")
     }
 
-    private val credentials = getCredentials()
     private val driveService = Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, credentials)
         .setApplicationName(APPLICATION_NAME)
         .build()

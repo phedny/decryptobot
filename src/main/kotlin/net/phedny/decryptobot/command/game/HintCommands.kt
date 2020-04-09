@@ -29,14 +29,12 @@ abstract class BaseHintCommand: PrivateMessageCommand {
 
             event.channel.send(message)
         } else {
-            val message = when {
+            when {
                 team.acceptsEncryptor               -> "Wow, wow, not so fast. Your team has no encryptor, yet. Pick up that role by sending me the `!encrypt` command first."
                 round.encryptor != event.author.id  -> "You're not the encryptor for your team this round, so I can't allow you to set the hints."
                 team.acceptsGuesses                 -> "You've already sent me three hints, so I'm now waiting for guesses to arrive."
                 else                                -> "Your team has finished this round. Please wait for your opponents to finish... :stopwatch:"
-            }
-
-            event.channel.send(message)
+            }.let { event.channel.send(it) }
         }
     }
 
