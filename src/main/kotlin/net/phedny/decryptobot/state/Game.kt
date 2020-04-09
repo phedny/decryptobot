@@ -15,6 +15,11 @@ data class Game(
     val white: Team
 ) {
 
+    val finished: Boolean
+            get() = black.correctOpponentGuesses == 2 || white.correctOpponentGuesses == 2 ||
+                    black.incorrectTeamGuesses == 2 || white.incorrectTeamGuesses == 2 ||
+                    (black.rounds.last().finished && white.rounds.last().finished && black.rounds.size == 8)
+
     fun getTeamColor(playerId: String): TeamColor = when {
         black.players.contains(playerId)    -> TeamColor.BLACK
         white.players.contains(playerId)    -> TeamColor.WHITE
@@ -66,6 +71,10 @@ data class Team(
             get() = rounds.lastOrNull()?.acceptsHints ?: false
     val acceptsGuesses: Boolean
             get() = rounds.lastOrNull()?.acceptsGuesses ?: false
+    val incorrectTeamGuesses: Int
+            get() = rounds.count { it.incorrectTeamGuess }
+    val correctOpponentGuesses: Int
+            get() = rounds.count { it.correctOpponentGuess }
 
     fun withNewRound(): Team {
         if (rounds.lastOrNull()?.finished == false) {
@@ -98,6 +107,10 @@ data class Round(
             get() = hints.none(::isNull)
     val finished: Boolean
             get() = teamGuess.none(::isNull) && opponentGuess.none(::isNull)
+    val incorrectTeamGuess: Boolean
+            get() = teamGuess.none(::isNull) && teamGuess != answer
+    val correctOpponentGuess: Boolean
+            get() = opponentGuess.none(::isNull) && opponentGuess == answer
 
     fun withEncryptor(playerId: String): Round {
         if (!acceptsEncryptor) {
@@ -155,6 +168,10 @@ object GameRepository {
         }
 
         games[gameIndex] = newGame
+    }
+
+    fun removeGameByPlayerId(playerId: String) {
+        games.removeIf { it.black.players.contains(playerId) || it.white.players.contains(playerId) }
     }
 
     fun newGame(guildId: String, channelId: String, black: Team, white: Team) {

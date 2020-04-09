@@ -47,19 +47,24 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
     }
 
     private fun processGameUpdate(event: PrivateMessageReceivedEvent, oldGame: Game, newGame: Game) {
-        GameRepository.updateGame(newGame)
-        val team = newGame.getTeam(event.author.id)
-
-        SheetsClient.writeRound(newGame, team.rounds.size)
-
-        val guildMembers = event.author.mutualGuilds.first { it.id == newGame.guildId }.members
-        val blackMembers = guildMembers.filter { it.id != event.author.id && newGame.black.players.contains(it.id) }
-        val whiteMembers = guildMembers.filter { it.id != event.author.id && newGame.white.players.contains(it.id) }
-
         val oldBlackRound = oldGame.black.rounds.last()
         val oldWhiteRound = oldGame.white.rounds.last()
         val newBlackRound = newGame.black.rounds.last()
         val newWhiteRound = newGame.white.rounds.last()
+        val roundFinished = newBlackRound.finished && newWhiteRound.finished
+
+        if (newGame.finished) {
+            GameRepository.removeGameByPlayerId(event.author.id)
+        } else {
+            GameRepository.updateGame(if (roundFinished) newGame.withNewRound() else newGame)
+        }
+
+        val team = newGame.getTeam(event.author.id)
+        SheetsClient.writeRound(newGame, team.rounds.size)
+
+        val guildMembers = event.author.mutualGuilds.first { it.id == newGame.guildId }.members.filter { it.id != event.author.id }
+        val blackMembers = guildMembers.filter { newGame.black.players.contains(it.id) }
+        val whiteMembers = guildMembers.filter { newGame.white.players.contains(it.id) }
 
         if (oldBlackRound.teamGuess.any(::isNull) && newBlackRound.teamGuess.none(::isNull)) {
             blackMembers.forEach { it.send("I have received ${newBlackRound.teamGuess.joinToString(" ")} as guess for your team code.") }
@@ -72,6 +77,33 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
         }
         if (oldBlackRound.opponentGuess.any(::isNull) && newBlackRound.opponentGuess.none(::isNull)) {
             whiteMembers.forEach { it.send("I have received ${newBlackRound.opponentGuess.joinToString(" ")} as guess for the code of the black team.") }
+        }
+
+        if (roundFinished) {
+            val message = listOf(
+                "**Round #0${team.rounds.size} has finished!**",
+                "",
+                "The black code was ${newBlackRound.answer.joinToString(" ")} and the black team guessed ${newBlackRound.teamGuess.joinToString(
+                    " "
+                )}. ${if (newBlackRound.incorrectTeamGuess) "This mistake results in a black token." else "Well done!"}",
+                "The white code was ${newWhiteRound.answer.joinToString(" ")} and the white team guessed ${newWhiteRound.teamGuess.joinToString(
+                    " "
+                )}. ${if (newWhiteRound.incorrectTeamGuess) "This mistake results in a black token." else "Well done!"}",
+                if (newWhiteRound.correctOpponentGuess) "The black team correctly guess the white code, resulting in a white token :+1:" else "The black team guessed ${newWhiteRound.opponentGuess.joinToString(
+                    " "
+                )} for the white code.",
+                if (newBlackRound.correctOpponentGuess) "The white team correctly guess the black code, resulting in a white token :+1:" else "The white team guessed ${newBlackRound.opponentGuess.joinToString(
+                    " "
+                )} for the black code.",
+                "",
+                "This results in the following token collection:",
+                "- Black team has ${newGame.white.correctOpponentGuesses} white tokens and ${newGame.black.incorrectTeamGuesses} black tokens.",
+                "- White team has ${newGame.black.correctOpponentGuesses} white tokens and ${newGame.white.incorrectTeamGuesses} black tokens.",
+                "",
+                if (newGame.finished) "This concludes the game. I hope you've enjoyed it and come back to play again :smile:" else "Let's continue to the next round."
+            ).joinToString("\n")
+
+            event.author.mutualGuilds.first { it.id == newGame.guildId }.textChannels.first { it.id == newGame.channelId }.send(message)
         }
     }
 
