@@ -2,6 +2,7 @@ package net.phedny.decryptobot.state
 
 import java.lang.IllegalArgumentException
 import java.lang.IllegalStateException
+import java.util.Objects.isNull
 
 enum class TeamColor {
     BLACK, WHITE
@@ -39,10 +40,16 @@ data class Game(
         TeamColor.BLACK -> copy(black = black.withHint(hintIndex, hint))
         TeamColor.WHITE -> copy(white = white.withHint(hintIndex, hint))
     }
-
     fun withHints(playerId: String, hints: List<String>): Game = when(getTeamColor(playerId)) {
         TeamColor.BLACK -> copy(black = black.withHints(hints))
         TeamColor.WHITE -> copy(white = white.withHints(hints))
+    }
+    fun withGuess(guessForTeam: TeamColor, guessingTeam: TeamColor, guess: List<Int>): Game = when(Pair(guessForTeam, guessingTeam)) {
+        Pair(TeamColor.BLACK, TeamColor.BLACK)  -> copy(black = black.withTeamGuess(guess))
+        Pair(TeamColor.BLACK, TeamColor.WHITE)  -> copy(black = black.withOpponentGuess(guess))
+        Pair(TeamColor.WHITE, TeamColor.BLACK)  -> copy(white = white.withOpponentGuess(guess))
+        Pair(TeamColor.WHITE, TeamColor.WHITE)  -> copy(white = white.withTeamGuess(guess))
+        else                                    -> this
     }
 }
 
@@ -71,24 +78,26 @@ data class Team(
     fun withEncryptor(playerId: String): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withEncryptor(playerId)))
     fun withHint(hintIndex: Int, hint: String): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withHint(hintIndex, hint)))
     fun withHints(hints: List<String>): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withHints(hints)))
+    fun withTeamGuess(guess: List<Int>): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withTeamGuess(guess)))
+    fun withOpponentGuess(guess: List<Int>): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withOpponentGuess(guess)))
 }
 
 data class Round(
     val answer: List<Int> = (1..4).shuffled().take(3),
     val encryptor: String? = null,
     val hints: List<String?> = listOf(null, null, null),
-    val teamGuesses: List<Int?> = listOf(null, null, null),
-    val opponentGuesses: List<Int?> = listOf(null, null, null)
+    val teamGuess: List<Int?> = listOf(null, null, null),
+    val opponentGuess: List<Int?> = listOf(null, null, null)
 ) {
 
     val acceptsEncryptor: Boolean
             get() = encryptor == null
     val acceptsHints: Boolean
-            get() = hints.any { it == null }
+            get() = hints.any(::isNull)
     val acceptsGuesses: Boolean
-            get() = hints.none { it == null } && (teamGuesses.any { it == null } || opponentGuesses.any { it == null })
+            get() = hints.none(::isNull)
     val finished: Boolean
-            get() = !acceptsHints && !acceptsGuesses
+            get() = teamGuess.none(::isNull) && opponentGuess.none(::isNull)
 
     fun withEncryptor(playerId: String): Round {
         if (!acceptsEncryptor) {
@@ -115,6 +124,22 @@ data class Round(
         }
 
         return copy(hints = hints)
+    }
+
+    fun withTeamGuess(guess: List<Int>): Round {
+        if (!acceptsGuesses) {
+            throw IllegalStateException("Round does not accept guesses")
+        }
+
+        return copy(teamGuess = guess)
+    }
+
+    fun withOpponentGuess(guess: List<Int>): Round {
+        if (!acceptsGuesses) {
+            throw IllegalStateException("Round does not accept guesses")
+        }
+
+        return copy(opponentGuess = guess)
     }
 }
 

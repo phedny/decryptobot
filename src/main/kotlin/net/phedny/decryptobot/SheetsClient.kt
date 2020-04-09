@@ -130,8 +130,39 @@ object SheetsClient {
         println("Write encryptor data: " + sheetsService.spreadsheets().values().update(spreadsheetId, "B74", ValueRange().setValues(data)).setValueInputOption("RAW").execute())
     }
 
-    fun writeHints(spreadsheetId: String, color: String, round: Int, hints: List<String?>) {
-        println("Write hints: " + sheetsService.spreadsheets().values().update(spreadsheetId, getHintRange(color, round), ValueRange().setValues(hints.map { listOf(it) })).setValueInputOption("RAW").execute())
+    fun writeRound(game: Game, round: Int) {
+        val blackRound = game.black.rounds[round - 1]
+        val whiteRound = game.white.rounds[round - 1]
+
+        fun guess(guess: List<Int?>): List<Int>? = guess.filterNotNull().let { if (it.size == 3) it else null }
+        fun answer(answer: List<Int>): List<Int>? = if (blackRound.finished && whiteRound.finished) answer else null
+
+        writeRound(game.black.spreadsheetId, round, blackRound.hints, whiteRound.hints, guess(blackRound.teamGuess), guess(whiteRound.opponentGuess), answer(blackRound.answer), answer(whiteRound.answer))
+        writeRound(game.white.spreadsheetId, round, blackRound.hints, whiteRound.hints, guess(blackRound.opponentGuess), guess(whiteRound.teamGuess), answer(blackRound.answer), answer(whiteRound.answer))
+    }
+
+    fun writeRound(spreadsheetId: String, round: Int, blackHints: List<String?>, whiteHints: List<String?>, blackGuess: List<Int>?, whiteGuess: List<Int>?, whiteAnswer: List<Int>?, blackAnswer: List<Int>?) {
+        val blackValues = listOf(
+            blackHints,
+            listOf("", "", ""),
+            blackGuess ?: listOf("", "", ""),
+            blackAnswer ?: listOf("", "", "")
+        )
+        val blackData = ValueRange().setRange(getRoundDataRange("BLACK", round)).setValues(blackValues).setMajorDimension("COLUMNS")
+
+        val whiteValues = listOf(
+            whiteHints,
+            listOf("", "", ""),
+            whiteGuess ?: listOf("", "", ""),
+            whiteAnswer ?: listOf("", "", "")
+        )
+        val whiteData = ValueRange().setRange(getRoundDataRange("WHITE", round)).setValues(whiteValues).setMajorDimension("COLUMNS")
+
+        val request = BatchUpdateValuesRequest()
+            .setValueInputOption("RAW")
+            .setData(listOf(blackData, whiteData))
+
+        println("Write round data: " + sheetsService.spreadsheets().values().batchUpdate(spreadsheetId, request).execute())
     }
 
     fun readGeneralInfo(spreadsheetId: String): List<String> {
@@ -152,28 +183,28 @@ object SheetsClient {
     }
 
     fun readHints(spreadsheetId: String, color: String, round: Int): List<String> {
-        val result = sheetsService.spreadsheets().values().get(spreadsheetId, getHintRange(color, round)).setValueRenderOption("FORMULA").execute()
+        val result = sheetsService.spreadsheets().values().get(spreadsheetId, getRoundDataRange(color, round)).setValueRenderOption("FORMULA").execute()
         return result.getValues().map { it.first().toString() }
     }
 
-    private fun getHintRange(color: String, round: Int): String {
+    private fun getRoundDataRange(color: String, round: Int): String {
         return when (Pair(color, round)) {
-            Pair("BLACK", 1) -> "M3:M5"
-            Pair("WHITE", 1) -> "B3:B5"
-            Pair("BLACK", 2) -> "M8:M10"
-            Pair("WHITE", 2) -> "B8:B10"
-            Pair("BLACK", 3) -> "M13:M15"
-            Pair("WHITE", 3) -> "B13:B15"
-            Pair("BLACK", 4) -> "M18:M20"
-            Pair("WHITE", 4) -> "B18:B20"
-            Pair("BLACK", 5) -> "R3:R5"
-            Pair("WHITE", 5) -> "G3:G5"
-            Pair("BLACK", 6) -> "R8:R10"
-            Pair("WHITE", 6) -> "G8:G10"
-            Pair("BLACK", 7) -> "R13:R15"
-            Pair("WHITE", 7) -> "G13:G15"
-            Pair("BLACK", 8) -> "R18:R20"
-            Pair("WHITE", 8) -> "G18:G20"
+            Pair("BLACK", 1) -> "M3:P5"
+            Pair("WHITE", 1) -> "B3:E5"
+            Pair("BLACK", 2) -> "M8:P10"
+            Pair("WHITE", 2) -> "B8:E10"
+            Pair("BLACK", 3) -> "M13:P15"
+            Pair("WHITE", 3) -> "B13:E15"
+            Pair("BLACK", 4) -> "M18:P20"
+            Pair("WHITE", 4) -> "B18:E20"
+            Pair("BLACK", 5) -> "R3:U5"
+            Pair("WHITE", 5) -> "G3:J5"
+            Pair("BLACK", 6) -> "R8:U10"
+            Pair("WHITE", 6) -> "G8:J10"
+            Pair("BLACK", 7) -> "R13:U15"
+            Pair("WHITE", 7) -> "G13:J15"
+            Pair("BLACK", 8) -> "R18:U20"
+            Pair("WHITE", 8) -> "G18:J20"
             else -> throw IllegalArgumentException("No such color or round")
         }
     }

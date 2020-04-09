@@ -44,9 +44,7 @@ abstract class BaseHintCommand: PrivateMessageCommand {
         val (team, otherTeam) = game.getTeams(event.author.id)
         if (!team.acceptsHints) {
             val newRound = team.rounds.last()
-            val teamColor = game.getTeamColor(event.author.id)
-            SheetsClient.writeHints(team.spreadsheetId, teamColor.name, team.rounds.size, newRound.hints)
-            SheetsClient.writeHints(otherTeam.spreadsheetId, teamColor.name, team.rounds.size, newRound.hints)
+            SheetsClient.writeRound(game, team.rounds.size)
 
             val hintsAsString = newRound.hints.map { "- $it" }.joinToString("\n")
             val guildMembers = event.author.mutualGuilds.first { it.id == game.guildId }.members
