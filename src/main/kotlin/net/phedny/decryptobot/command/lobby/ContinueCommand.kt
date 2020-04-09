@@ -1,5 +1,6 @@
 package net.phedny.decryptobot.command.lobby
 
+import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent
 import net.phedny.decryptobot.SheetsClient
 import net.phedny.decryptobot.command.Command
@@ -11,22 +12,53 @@ import net.phedny.decryptobot.state.Words
 
 class ContinueCommand() : Command {
     override fun execute(event: GuildMessageReceivedEvent, prefix:String) {
-        if (LobbyRepository.getLobby(event.guild.id, event.channel.id) == null) {
-            LobbyRepository.newLobby(event.guild.id, event.channel.id)
-        }
-        val lobby = LobbyRepository.getLobby(event.guild.id, event.channel.id)!!
-
         val spreadsheetId = Regex("docs.google.com/spreadsheets/d/([\\w-]+)").find(event.message.contentRaw)?.groupValues?.get(1)
         if (spreadsheetId?.isNotEmpty() == true) {
+            var channelMessageId: String? = null
+            var setupFinished = false
+            val channelMessagePrefix = "Let's continue a game for you.\n"
+            event.channel.sendMessage(channelMessagePrefix + "Please give me half a minute to read the Google spreadsheet provided... :hammer_pick:")
+            .queue {
+                channelMessageId = it.id
+                if (setupFinished) {
+                    updateChannelMessage(event, it.id, channelMessagePrefix)
+                }
+            }
+
             val game = SheetsClient.readGameInfo(spreadsheetId)
+            if (game == null) {
+                event.channel.sendMessage("Something went wrong with reading the game. Make sure you send me the URL of a valid decrypto file, that the file of the opponents still exists and that neither files have been tampered with.")
+                return
+            }
+            val players = game.black.players.union(game.white.players)
+            val playersInGame = players.filter { player -> GameRepository.getGameByPlayerId(player).let { it != null && it != game } }
+            if (playersInGame.isNotEmpty()) {
+                val playersInGameStr = event.message.guild.members.filter { playersInGame.contains(it.id) }.joinToString(" ") { it.asMention }
+                return event.channel.send("This group of players can't start a game, as the following players are already in an active game: $playersInGameStr")
+            }
+
+            val blackPlayers = event.message.guild.members.filter { game.black.players.contains(it.id) }
+            blackPlayers.forEach {
+                it.send("Welcome back to the black team. You can find the spreadsheet at https://docs.google.com/spreadsheets/d/${game.black.spreadsheetId}\n" +
+                        "The four secret words for your team are: ${game.black.secretWords.joinToString()}")
+            }
+
+            val whitePlayers = event.message.guild.members.filter { game.white.players.contains(it.id) }
+            whitePlayers.forEach {
+                it.send("Welcome back to the white team. You can find the spreadsheet at https://docs.google.com/spreadsheets/d/${game.white.spreadsheetId}\n" +
+                        "The four secret words for your team are: ${game.white.secretWords.joinToString()}.\n" +
+                        "If you're not sure how to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
+            }
+
+            GameRepository.games.add(game)
+
+            setupFinished = true
+            channelMessageId?.let { updateChannelMessage(event, it, channelMessagePrefix) }
+            val missingPlayers = players.filter { player -> event.guild.members.find { it.id == player }?.onlineStatus != OnlineStatus.ONLINE }
+            if (missingPlayers.isNotEmpty()){
+                event.channel.send("Even though the game is al setup, it seems like your missing some players: ${missingPlayers.joinToString(", ") { "<@$it>" }}. Be sure to give them a call! :telephone_receiver:" )
+            }
         }
 
-    }
-
-    private fun updateChannelMessage(event: GuildMessageReceivedEvent, channelMessageId: String, channelMessagePrefix: String) {
-        event.channel.editMessageById(channelMessageId, channelMessagePrefix +
-                "Everybody should have received a link to the Google spreadsheet and the secret words.\n" +
-                "If you're not sure to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
-            .queue()
     }
 }

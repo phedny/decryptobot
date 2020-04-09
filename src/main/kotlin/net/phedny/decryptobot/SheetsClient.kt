@@ -220,14 +220,13 @@ object SheetsClient {
             ranges.add(getRoundDataRange("WHITE", i))
             ranges.add(getRoundDataRange("BLACK", i))
         }
-        val valueRanges = readRanges(spreadsheetId,ranges)
-        println(valueRanges)
+        val valueRanges = readRanges(spreadsheetId, ranges)
 
         val (opponentSpreadsheetId, guildId, channelId, color) = valueRanges.getByRange(GENERAL_INFO_RANGE)?.map { it.first().toString() } ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
         if (!spreadsheetExists(opponentSpreadsheetId)) {
             return null
         }
-        val opponentValueRanges = readRanges(opponentSpreadsheetId,ranges)
+        val opponentValueRanges = readRanges(opponentSpreadsheetId, ranges)
 
         val (black, white) = when (color) {
             "BLACK" -> Pair(readTeam(valueRanges, opponentValueRanges, spreadsheetId, "BLACK"),readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "WHITE"))

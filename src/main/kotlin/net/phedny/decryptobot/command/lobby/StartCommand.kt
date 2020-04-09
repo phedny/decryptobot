@@ -61,11 +61,11 @@ class StartCommand : Command {
         spreadsheetsFinished = true
         channelMessageId?.let { updateChannelMessage(event, it, channelMessagePrefix) }
     }
+}
 
-    private fun updateChannelMessage(event: GuildMessageReceivedEvent, channelMessageId: String, channelMessagePrefix: String) {
-        event.channel.editMessageById(channelMessageId, channelMessagePrefix +
-                "Everybody should have received a link to the Google spreadsheet and the secret words.\n" +
-                "If you're not sure to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
-            .queue()
-    }
+fun updateChannelMessage(event: GuildMessageReceivedEvent, channelMessageId: String, channelMessagePrefix: String) {
+    event.channel.editMessageById(channelMessageId, channelMessagePrefix +
+            "Everybody should have received a link to the Google spreadsheet and the secret words.\n" +
+            "If you're not sure to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
+        .queue()
 }
