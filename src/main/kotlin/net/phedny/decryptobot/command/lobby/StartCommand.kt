@@ -51,8 +51,7 @@ class StartCommand : Command {
 
         whitePlayers.forEach {
             it.send("Welcome to the white team. You can find the spreadsheet at https://docs.google.com/spreadsheets/d/$whiteSpreadsheetId\n" +
-                    "The for secret words for your team are: ${whiteWords.joinToString()}.\n" +
-                    "If you're not sure how to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
+                    "The for secret words for your team are: ${whiteWords.joinToString()}.")
         }
 
         GameRepository.newGame(event.guild.id, event.channel.id, Team(blackSpreadsheetId, blackWords, lobby.blackPlayers, emptyList()), Team(whiteSpreadsheetId, whiteWords, lobby.whitePlayers, emptyList()))

@@ -241,7 +241,7 @@ object SheetsClient {
         val (secretWordsRange1, secretWordsRange2) = getSecretWordsRanges(color)
         val secretWords1 = valueRanges.getByRange(secretWordsRange1) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
         val secretWords2 = valueRanges.getByRange(secretWordsRange2) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
-        val secretWords = secretWords1.plus(secretWords2).flatMap { values -> values.map { it.toString().replaceFirst(Regex("\uD83D\uDD11 \\d -- "), "") } }
+        val secretWords = secretWords1.plus(secretWords2).flatMap { values -> values.map { it.toString().removePrefix("\uD83D\uDD11 \\d -- ") } }
         println("secretWords: $secretWords")
 
         val playersResult = valueRanges.getByRange(PLAYER_RANGE) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")

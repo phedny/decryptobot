@@ -6,9 +6,6 @@ import net.phedny.decryptobot.SheetsClient
 import net.phedny.decryptobot.command.Command
 import net.phedny.decryptobot.extensions.send
 import net.phedny.decryptobot.state.GameRepository
-import net.phedny.decryptobot.state.LobbyRepository
-import net.phedny.decryptobot.state.Team
-import net.phedny.decryptobot.state.Words
 
 class ContinueCommand() : Command {
     override fun execute(event: GuildMessageReceivedEvent, prefix:String) {
@@ -27,7 +24,7 @@ class ContinueCommand() : Command {
 
             val game = SheetsClient.readGameInfo(spreadsheetId)
             if (game == null) {
-                event.channel.sendMessage("Something went wrong with reading the game. Make sure you send me the URL of a valid decrypto file, that the file of the opponents still exists and that neither files have been tampered with.")
+                event.channel.sendMessage("Something went wrong with reading the game. Make sure you send me the URL of a valid Decrypto spreadsheet, that the spreadsheet of the opponents still exists and that neither spreadsheets have been tampered with.")
                 return
             }
             val players = game.black.players.union(game.white.players)
@@ -46,17 +43,16 @@ class ContinueCommand() : Command {
             val whitePlayers = event.message.guild.members.filter { game.white.players.contains(it.id) }
             whitePlayers.forEach {
                 it.send("Welcome back to the white team. You can find the spreadsheet at https://docs.google.com/spreadsheets/d/${game.white.spreadsheetId}\n" +
-                        "The four secret words for your team are: ${game.white.secretWords.joinToString()}.\n" +
-                        "If you're not sure how to play the game on Discord, you can send me the `!help` command and I'll help you out. Enjoy your game!")
+                        "The four secret words for your team are: ${game.white.secretWords.joinToString()}.")
             }
 
             GameRepository.games.add(game)
 
             setupFinished = true
             channelMessageId?.let { updateChannelMessage(event, it, channelMessagePrefix) }
-            val missingPlayers = players.filter { player -> event.guild.members.find { it.id == player }?.onlineStatus != OnlineStatus.ONLINE }
-            if (missingPlayers.isNotEmpty()){
-                event.channel.send("Even though the game is al setup, it seems like your missing some players: ${missingPlayers.joinToString(", ") { "<@$it>" }}. Be sure to give them a call! :telephone_receiver:" )
+            val missingMembers = event.guild.members.filter { players.contains(it.id) }.filter { it.onlineStatus != OnlineStatus.ONLINE }
+            if (missingMembers.isNotEmpty()){
+                event.channel.send("Even though the game is all set up, it seems like you're missing some players: ${missingMembers.joinToString(", ") { it.asMention }}. Be sure to give them a call! :telephone_receiver:" )
             }
         }
 
