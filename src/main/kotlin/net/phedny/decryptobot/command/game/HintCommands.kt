@@ -89,7 +89,7 @@ class HintsCommand: BaseHintCommand() {
 
 class HintsReadyCommand: BaseHintCommand() {
     override fun processHint(input: String, game: Game, team: Team, playerId: String, round: Round): Pair<Game, String> {
-        val hints = SheetsClient.readHints(team.spreadsheetId, game.getTeamColor(playerId).name, team.rounds.size)
+        val hints = SheetsClient.readHints(team.spreadsheetId, game.getTeamColor(playerId).name, team.roundNumber)
         return Pair(game.withHints(playerId, hints), "I've found your hints in the spreadsheet :+1:. It's time for some guess time!")
     }
 }
