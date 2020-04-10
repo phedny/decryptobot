@@ -1,7 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     kotlin("jvm") version "1.3.71"
+    id("com.github.johnrengelman.shadow") version "2.0.4"
 }
 
 group = "net.phedny"
@@ -23,4 +25,16 @@ dependencies {
 
 tasks.withType<KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
+}
+
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "net.phedny.decryptobot.ApplicationKt"
+    }
+}
+
+tasks.withType<ShadowJar> {
+    baseName = "app"
+    classifier = ""
+    version = ""
 }
