@@ -83,7 +83,7 @@ data class Team(
             throw IllegalStateException("Can't progress to new round when the last round is not yet finished")
         }
 
-        return copy(rounds = rounds.plus(Round()))
+        return copy(rounds = rounds.plus(Round(rounds.isEmpty())))
     }
 
     fun withEncryptor(playerId: String): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withEncryptor(playerId)))
@@ -94,6 +94,7 @@ data class Team(
 }
 
 data class Round(
+    val firstRound: Boolean,
     val answer: List<Int> = (1..4).shuffled().take(3),
     val encryptor: String? = null,
     val hints: List<String?> = listOf(null, null, null),
@@ -107,7 +108,7 @@ data class Round(
     val acceptsGuesses: Boolean
             get() = hints.none(::isNull)
     val finished: Boolean
-            get() = teamGuess.none(::isNull) && opponentGuess.none(::isNull)
+            get() = teamGuess.none(::isNull) && (firstRound || opponentGuess.none(::isNull))
     val incorrectTeamGuess: Boolean
             get() = teamGuess.none(::isNull) && teamGuess != answer
     val correctOpponentGuess: Boolean
@@ -149,7 +150,7 @@ data class Round(
     }
 
     fun withOpponentGuess(guess: List<Int>): Round {
-        if (!acceptsGuesses) {
+        if (!acceptsGuesses || firstRound) {
             throw IllegalStateException("Round does not accept guesses")
         }
 

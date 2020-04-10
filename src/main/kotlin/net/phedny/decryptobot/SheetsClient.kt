@@ -268,7 +268,7 @@ object SheetsClient {
             println("hints $i: $hints")
             println("team guess $i: $teamGuess")
             println("opponent guess $i: $opponentGuess")
-            Round(answer, encryptor, hints, teamGuess, opponentGuess)
+            Round(index == 0, answer, encryptor, hints, teamGuess, opponentGuess)
         } ?: emptyList()
 
     fun readHints(spreadsheetId: String, color: String, round: Int): List<String> = readRange(spreadsheetId, getRoundDataRange(color, round)).map { it.first().toString() }

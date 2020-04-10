@@ -37,9 +37,9 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
         return when {
             round.teamGuess.any(::isNull)
                 -> "Thanks for the guesses. To complete the round, you also need to send in guesses for the code of your own team."
-            otherRound.opponentGuess.any(::isNull)
+            otherRound.opponentGuess.any(::isNull) && !otherRound.firstRound
                 -> "Thanks for the guesses. To complete the round, you also need to send in guesses for the code of the other team."
-            round.opponentGuess.any(::isNull) || otherRound.teamGuess.any(::isNull)
+            otherRound.teamGuess.any(::isNull) || (round.opponentGuess.any(::isNull) && !round.firstRound)
                 -> "Thanks for the guesses, your team has completed the round. Let's wait for the other team to finish their guesses... :stopwatch:"
             else
                 -> "Thanks for the guesses. Those complete the round, so let me check everything... :face_with_monocle:"
@@ -83,25 +83,25 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
             val message = listOf(
                 "**Round #0${team.rounds.size} has finished!**",
                 "",
-                "The black code was ${newBlackRound.answer.joinToString(" ")} and the black team guessed ${newBlackRound.teamGuess.joinToString(
-                    " "
-                )}. ${if (newBlackRound.incorrectTeamGuess) "This mistake results in a black token." else "Well done!"}",
-                "The white code was ${newWhiteRound.answer.joinToString(" ")} and the white team guessed ${newWhiteRound.teamGuess.joinToString(
-                    " "
-                )}. ${if (newWhiteRound.incorrectTeamGuess) "This mistake results in a black token." else "Well done!"}",
-                if (newWhiteRound.correctOpponentGuess) "The black team correctly guess the white code, resulting in a white token :+1:" else "The black team guessed ${newWhiteRound.opponentGuess.joinToString(
-                    " "
-                )} for the white code.",
-                if (newBlackRound.correctOpponentGuess) "The white team correctly guess the black code, resulting in a white token :+1:" else "The white team guessed ${newBlackRound.opponentGuess.joinToString(
-                    " "
-                )} for the black code.",
+                "The black code was ${newBlackRound.answer.joinToString(" ")} and the black team guessed ${newBlackRound.teamGuess.joinToString(" ")}. ${if (newBlackRound.incorrectTeamGuess) "This mistake results in a black token." else "Well done!"}",
+                "The white code was ${newWhiteRound.answer.joinToString(" ")} and the white team guessed ${newWhiteRound.teamGuess.joinToString(" ")}. ${if (newWhiteRound.incorrectTeamGuess) "This mistake results in a black token." else "Well done!"}",
+                when {
+                    newWhiteRound.firstRound -> null
+                    newWhiteRound.correctOpponentGuess -> "The black team correctly guessed the white code, resulting in a white token :+1:"
+                    else -> "The black team guessed ${newWhiteRound.opponentGuess.joinToString(" ")} for the white code."
+                },
+                when {
+                    newBlackRound.firstRound -> null
+                    newBlackRound.correctOpponentGuess -> "The white team correctly guessed the black code, resulting in a white token :+1:"
+                    else -> "The white team guessed ${newBlackRound.opponentGuess.joinToString(" ")} for the black code."
+                },
                 "",
                 "This results in the following token collection:",
                 "- Black team has ${newGame.white.correctOpponentGuesses} white tokens and ${newGame.black.incorrectTeamGuesses} black tokens.",
                 "- White team has ${newGame.black.correctOpponentGuesses} white tokens and ${newGame.white.incorrectTeamGuesses} black tokens.",
                 "",
                 if (newGame.finished) "This concludes the game. I hope you've enjoyed it and come back to play again :smile:" else "Let's continue to the next round."
-            ).joinToString("\n")
+            ).filterNotNull().joinToString("\n")
 
             event.author.mutualGuilds.first { it.id == newGame.guildId }.textChannels.first { it.id == newGame.channelId }.send(message)
         }
@@ -127,14 +127,16 @@ class GuessCommand: BaseGuessCommand() {
         blackRegexes.mapNotNull { regex -> regex.find(input)?.groupValues?.get(0)?.filter { "1234".contains(it) }?.map { it - '0' } }.firstOrNull()?.let {
             if (!game.black.acceptsGuesses) {
                 return Pair(game, "Be a little patient, please. The black team hasn't finished their hints, yet.")
+            } else if (game.black.roundNumber > 1 || teamColor == TeamColor.BLACK) {
+                newGame = newGame.withGuess(TeamColor.BLACK, teamColor, it)
             }
-            newGame = newGame.withGuess(TeamColor.BLACK, teamColor, it)
         }
         whiteRegexes.mapNotNull { regex -> regex.find(input)?.groupValues?.get(0)?.filter { "1234".contains(it) }?.map { it - '0' } }.firstOrNull()?.let {
             if (!game.white.acceptsGuesses) {
                 return Pair(game, "Be a little patient, please. The white team hasn't finished their hints, yet.")
+            } else if (game.white.roundNumber > 1 || teamColor == TeamColor.WHITE) {
+                newGame = newGame.withGuess(TeamColor.WHITE, teamColor, it)
             }
-            newGame = newGame.withGuess(TeamColor.WHITE, teamColor, it)
         }
 
         val (newTeam, newOtherTeam) = newGame.getTeams(playerId)
