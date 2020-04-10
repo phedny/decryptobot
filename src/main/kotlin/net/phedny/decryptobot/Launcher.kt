@@ -4,9 +4,8 @@ import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.MemberCachePolicy
 import net.phedny.decryptobot.Settings.PREFIX
-import net.phedny.decryptobot.command.AnswerCommand
-import net.phedny.decryptobot.command.HelpCommand
-import net.phedny.decryptobot.command.PrivateAnswerCommand
+import net.phedny.decryptobot.command.PrivateHelpCommand
+import net.phedny.decryptobot.command.PublicHelpCommand
 import net.phedny.decryptobot.command.game.*
 import net.phedny.decryptobot.command.lobby.*
 import net.phedny.decryptobot.listeners.EventListener
@@ -24,9 +23,8 @@ class Launcher(private val token: String) {
     }
 
     private fun router() = Router.Builder(PREFIX)
-        .add("answer", AnswerCommand())
-        .add("answer", PrivateAnswerCommand())
-        .add("help", HelpCommand())
+        .add("help", PrivateHelpCommand())
+        .add("help", PublicHelpCommand())
 
             // Lobby commands
         .add("decrypto", DecryptoCommand())
