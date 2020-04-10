@@ -253,11 +253,9 @@ object SheetsClient {
         return Team(spreadsheetId, secretWords, players, rounds)
     }
 
-    private fun readRounds(valueRanges: List<ValueRange>, opponentValueRanges: List<ValueRange>, color: String): List<Round> {
-        val rounds = mutableListOf<Round>()
-        val encryptorData = valueRanges.getByRange(ENCRYPTOR_RANGE)
-        for (i in 1..8) {
-            val encryptorDataRound = encryptorData?.getOrNull(i - 1) ?: break
+    private fun readRounds(valueRanges: List<ValueRange>, opponentValueRanges: List<ValueRange>, color: String): List<Round> =
+        valueRanges.getByRange(ENCRYPTOR_RANGE)?.mapIndexed { index, encryptorDataRound ->
+            val i = index + 1
             val encryptor = encryptorDataRound[0].toString()
             val answer = encryptorDataRound[1].toString().split(" ").map { it.toInt() }
             println("encryptor round $i: $encryptor")
@@ -270,15 +268,10 @@ object SheetsClient {
             println("hints $i: $hints")
             println("team guess $i: $teamGuess")
             println("opponent guess $i: $opponentGuess")
-            rounds.add(Round(answer, encryptor, hints, teamGuess, opponentGuess))
-        }
-        return rounds
-    }
+            Round(answer, encryptor, hints, teamGuess, opponentGuess)
+        } ?: emptyList()
 
-    fun readHints(spreadsheetId: String, color: String, round: Int): List<String> {
-        val result = readRange(spreadsheetId, getRoundDataRange(color, round))
-        return result.map { it.first().toString() }
-    }
+    fun readHints(spreadsheetId: String, color: String, round: Int): List<String> = readRange(spreadsheetId, getRoundDataRange(color, round)).map { it.first().toString() }
 
     private fun readRange(spreadsheetId: String, range: String) = sheetsService.spreadsheets().values().get(spreadsheetId, range).setValueRenderOption("FORMULA").execute().getValues()
 
