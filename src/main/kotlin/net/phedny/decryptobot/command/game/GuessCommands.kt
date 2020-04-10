@@ -146,6 +146,23 @@ class GuessCommand: BaseGuessCommand() {
 
 class GuessesReadyCommand: BaseGuessCommand() {
     override fun processGuesses(input: String, game: Game, playerId: String): Pair<Game, String> {
-        TODO("Not yet implemented")
+        val team = game.getTeam(playerId)
+        val teamColor = game.getTeamColor(playerId)
+        val (blackGuess, whiteGuess) = SheetsClient.readGuesses(team.spreadsheetId, team.roundNumber)
+
+        var newGame = game
+        blackGuess?.let {
+            if (game.black.acceptsGuesses && (game.black.roundNumber > 1) || teamColor == TeamColor.BLACK) {
+                newGame = newGame.withGuess(TeamColor.BLACK, teamColor, it)
+            }
+        }
+        whiteGuess?.let {
+            if (game.white.acceptsGuesses && (game.white.roundNumber > 1) || teamColor == TeamColor.WHITE) {
+                newGame = newGame.withGuess(TeamColor.WHITE, teamColor, it)
+            }
+        }
+
+        val (newTeam, newOtherTeam) = newGame.getTeams(playerId)
+        return Pair(newGame, determineResponse(newTeam, newOtherTeam))
     }
 }

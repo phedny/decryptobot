@@ -273,6 +273,13 @@ object SheetsClient {
 
     fun readHints(spreadsheetId: String, color: String, round: Int): List<String> = readRange(spreadsheetId, getRoundDataRange(color, round)).map { it.first().toString() }
 
+    fun readGuesses(spreadsheetId: String, round: Int): Pair<List<Int>?, List<Int>?> {
+        val values = readRanges(spreadsheetId, listOf(getRoundDataRange("BLACK", round), getRoundDataRange("WHITE", round)))
+        val blackGuess = values.getByRange(getRoundDataRange("BLACK", round))?.mapNotNull { it.getOrNull(2)?.toString()?.toInt() }.let { if (it?.size == 3) it else null }
+        val whiteGuess = values.getByRange(getRoundDataRange("WHITE", round))?.mapNotNull { it.getOrNull(2)?.toString()?.toInt() }.let { if (it?.size == 3) it else null }
+        return Pair(blackGuess, whiteGuess)
+    }
+
     private fun readRange(spreadsheetId: String, range: String) = sheetsService.spreadsheets().values().get(spreadsheetId, range).setValueRenderOption("FORMULA").execute().getValues()
 
     private fun readRanges(spreadsheetId: String, ranges: List<String>) = sheetsService.spreadsheets().values().batchGet(spreadsheetId).setRanges(ranges).setValueRenderOption("FORMULA").execute().valueRanges
