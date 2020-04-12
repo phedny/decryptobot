@@ -32,6 +32,7 @@ object SheetsClient {
      * If modifying these scopes, delete your previously saved tokens/ folder.
      */
     private val SCOPES: List<String> = listOf(DriveScopes.DRIVE_FILE, SheetsScopes.SPREADSHEETS)
+    private val SECRET_WORD_REGEX = """\uD83D\uDD11 \d -- """.toRegex()
     private const val CREDENTIALS_FILE_PATH = "/credentials.json"
     private const val TOKENS_DIRECTORY_PATH = "tokens"
     private const val TEMPLATE_SPREADSHEET_ID = "1KXP68tPMVIf_Il0RLe55R4xuPmfdfl0B_VUIJ71q4wg"
@@ -241,7 +242,7 @@ object SheetsClient {
         val (secretWordsRange1, secretWordsRange2) = getSecretWordsRanges(color)
         val secretWords1 = valueRanges.getByRange(secretWordsRange1) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
         val secretWords2 = valueRanges.getByRange(secretWordsRange2) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
-        val secretWords = secretWords1.plus(secretWords2).flatMap { values -> values.map { it.toString().removePrefix("\uD83D\uDD11 \\d -- ") } }
+        val secretWords = secretWords1.plus(secretWords2).flatMap { values -> values.map { it.toString().replaceFirst(SECRET_WORD_REGEX, "") } }
         println("secretWords: $secretWords")
 
         val playersResult = valueRanges.getByRange(PLAYER_RANGE) ?: throw IllegalStateException("Something is wrong with the game information in the provided spreadsheet")
