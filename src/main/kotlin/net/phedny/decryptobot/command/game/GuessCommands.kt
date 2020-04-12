@@ -53,7 +53,7 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
         val newWhiteRound = newGame.white.rounds.last()
         val roundFinished = newBlackRound.finished && newWhiteRound.finished
 
-        if (newGame.finished) {
+        if (roundFinished && newGame.finished) {
             GameRepository.removeGameByPlayerId(event.author.id)
         } else {
             GameRepository.updateGame(if (roundFinished) newGame.withNewRound() else newGame)
