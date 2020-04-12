@@ -229,8 +229,8 @@ object SheetsClient {
         val opponentValueRanges = readRanges(opponentSpreadsheetId, ranges)
 
         val (black, white) = when (color) {
-            "BLACK" -> Pair(readTeam(valueRanges, opponentValueRanges, spreadsheetId, "BLACK"),readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "WHITE"))
-            "WHITE" -> Pair(readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "BLACK"),readTeam(valueRanges, opponentValueRanges, spreadsheetId, "WHITE"))
+            "BLACK" -> Pair(readTeam(valueRanges, opponentValueRanges, spreadsheetId, "BLACK"), readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "WHITE"))
+            "WHITE" -> Pair(readTeam(opponentValueRanges, valueRanges, opponentSpreadsheetId, "BLACK"), readTeam(valueRanges, opponentValueRanges, spreadsheetId, "WHITE"))
             else -> throw IllegalStateException("Unknown color: $color")
         }
 
@@ -264,7 +264,7 @@ object SheetsClient {
             val roundData = valueRanges.getByRange(getRoundDataRange(color, i))
             val hints = roundData?.map { it[0]?.toString() } ?: listOf(null, null, null)
             val teamGuess = roundData?.map { it.getOrNull(2)?.toString()?.toInt() } ?: listOf(null, null, null)
-            val opponentGuess = opponentValueRanges.getByRange(getRoundDataRange(color, i))?.map { it.getOrNull(2)?.toString()?.toInt() } ?: listOf(null, null, null)
+            val opponentGuess = opponentValueRanges.getByRange(getRoundDataRange(color, i))?.map { it.getOrNull(2)?.toString()?.toIntOrNull() } ?: listOf(null, null, null)
             println("hints $i: $hints")
             println("team guess $i: $teamGuess")
             println("opponent guess $i: $opponentGuess")
