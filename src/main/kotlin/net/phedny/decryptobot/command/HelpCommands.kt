@@ -19,7 +19,7 @@ private fun sendHelp(channel: MessageChannel) {
     channel.send("The game consists of up to 8 rounds. In each round, first one person in each team has to come up with hints to disguise a secret code and next the rest of the team must guess the correct code. Also, you have to guess the code of the other team.\n" +
             "When you're the encryptor that is going to come up with the hints, this is what you do:\n" +
             "1. Send me the `!encrypt` command in a private message. I'll provide you with a three digit secret code.\n" +
-            "2. Provide the hints that you've come up with. You have three ways of doing this:\n" +
+            "2. Provide the hints that you've come up with. You have four ways of doing this:\n" +
             "   a. Fill them in the spreadsheet yourself. When done, send me the `!hintsReady` command in private.\n" +
             "   b. Privately send me the three hints, by using the `!hint` command three times to provide the three hints in the order of the digits in the secret code.\n" +
             "   c. To send the hints in another order, use the `!hint1`, `!hint2` and `!hint3` commands.\n" +
