@@ -4,7 +4,7 @@ import net.phedny.decryptobot.SheetsClient
 import java.nio.charset.StandardCharsets.UTF_8
 
 object Words {
-    private val words: Map<String, List<String>> = listOf("nl")
+    private val words: Map<String, List<String>> = listOf("nl", "en")
         .map { Pair(it, SheetsClient::class.java.getResourceAsStream("/words_$it.txt").reader(UTF_8).readLines().filter { it.isNotBlank() }.map { it.toUpperCase() }) }
         .toMap()
 
