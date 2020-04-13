@@ -24,6 +24,12 @@ class StartCommand : Command {
         val blackPlayers = event.message.guild.members.filter { lobby.blackPlayers.contains(it.id) }
         val whitePlayers = event.message.guild.members.filter { lobby.whitePlayers.contains(it.id) }
 
+        val wordList = event.message.contentRaw.removePrefix(prefix).trim()
+        if (wordList.isBlank()) {
+            return event.channel.send("Please pick a word list to use for this game. The following word lists are available: " + Words.wordLists.joinToString(", "))
+        }
+        val (blackWords, whiteWords) = Words.pickWords(wordList) ?: return event.channel.send("The word list does not exist, pick one of: " + Words.wordLists.joinToString(", "))
+
         val channelMessagePrefix = "Let's start a game for you.\n" +
                 "Black team is formed by ${blackPlayers.joinToString { it.asMention }}\n" +
                 "White team is formed by ${whitePlayers.joinToString { it.asMention }}\n"
@@ -37,7 +43,6 @@ class StartCommand : Command {
                 }
             }
 
-        val (blackWords, whiteWords) = Words.pickWords()
         val blackSpreadsheetId = SheetsClient.initializeNewSpreadsheet()
         val whiteSpreadsheetId = SheetsClient.initializeNewSpreadsheet()
 
