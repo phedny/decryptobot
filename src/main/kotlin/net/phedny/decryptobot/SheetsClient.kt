@@ -188,17 +188,17 @@ object SheetsClient {
     fun writeRound(spreadsheetId: String, round: Int, blackHints: List<String?>, whiteHints: List<String?>, blackGuess: List<Int>?, whiteGuess: List<Int>?, blackAnswer: List<Int>?, whiteAnswer: List<Int>?) {
         val blackValues = listOf(
             blackHints,
-            listOf("", "", ""),
-            blackGuess ?: listOf("", "", ""),
-            blackAnswer ?: listOf("", "", "")
+            emptyList(),
+            blackGuess ?: emptyList(),
+            blackAnswer ?: emptyList()
         )
         val blackData = ValueRange().setRange(getRoundDataRange("BLACK", round)).setValues(blackValues).setMajorDimension("COLUMNS")
 
         val whiteValues = listOf(
             whiteHints,
-            listOf("", "", ""),
-            whiteGuess ?: listOf("", "", ""),
-            whiteAnswer ?: listOf("", "", "")
+            emptyList(),
+            whiteGuess ?: emptyList(),
+            whiteAnswer ?: emptyList()
         )
         val whiteData = ValueRange().setRange(getRoundDataRange("WHITE", round)).setValues(whiteValues).setMajorDimension("COLUMNS")
 
