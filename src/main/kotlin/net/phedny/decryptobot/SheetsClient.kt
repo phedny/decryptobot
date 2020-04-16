@@ -14,6 +14,9 @@ import com.google.api.services.drive.model.Permission
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 import net.phedny.decryptobot.state.Game
 import net.phedny.decryptobot.state.Round
 import net.phedny.decryptobot.state.Team
@@ -75,7 +78,7 @@ object SheetsClient {
         }
     }
 
-    fun initializeNewSpreadsheet(): Triple<String, Int, Int> {
+    suspend fun initializeNewSpreadsheet(): Triple<String, Int, Int> = withContext(Dispatchers.IO) {
         val spreadsheet = Spreadsheet()
         spreadsheet.properties = SpreadsheetProperties().setTitle("Decrypto game")
         val spreadsheetId = sheetsService.spreadsheets().create(spreadsheet)
@@ -83,25 +86,35 @@ object SheetsClient {
             .execute()
             .spreadsheetId
 
+        val publishDeferred = async { makeSheetPublic(spreadsheetId) }
+
         val copyRequest = CopySheetToAnotherSpreadsheetRequest()
         copyRequest.destinationSpreadsheetId = spreadsheetId
         val copyResult = sheetsService.spreadsheets().sheets().copyTo(TEMPLATE_SPREADSHEET_ID, 0, copyRequest).execute()
+        val sheetId = copyResult.sheetId
         println("Copy request: $copyResult")
 
+        val protectedRangeId = async { prepareSheet(spreadsheetId, sheetId) }
 
+        publishDeferred.await()
+        Triple(spreadsheetId, copyResult.sheetId, protectedRangeId.await())
+    }
+
+    private suspend fun prepareSheet(spreadsheetId: String, sheetId: Int?): Int = withContext(Dispatchers.IO) {
         val batchUpdateRequest = BatchUpdateSpreadsheetRequest()
         batchUpdateRequest.requests = listOf(
             Request().setDeleteSheet(DeleteSheetRequest().setSheetId(0)),
-            Request().setUpdateSheetProperties(UpdateSheetPropertiesRequest().setProperties(SheetProperties().setSheetId(copyResult.sheetId).setTitle("Decrypto game")).setFields("title")),
-            Request().setAddProtectedRange(AddProtectedRangeRequest().setProtectedRange(ProtectedRange().setDescription("SheetProtection").setRange(GridRange().setSheetId(copyResult.sheetId)).setEditors(Editors().setUsers(listOf("decryptobot@gmail.com"))))),
-            Request().setUpdateDimensionProperties(UpdateDimensionPropertiesRequest().setRange(DimensionRange().setSheetId(copyResult.sheetId).setDimension("ROWS").setStartIndex(39).setEndIndex(139)).setProperties(DimensionProperties().setHiddenByUser(true)).setFields("hiddenByUser"))
+            Request().setUpdateSheetProperties(UpdateSheetPropertiesRequest().setProperties(SheetProperties().setSheetId(sheetId).setTitle("Decrypto game")).setFields("title")),
+            Request().setAddProtectedRange(AddProtectedRangeRequest().setProtectedRange(ProtectedRange().setDescription("SheetProtection").setRange(GridRange().setSheetId(sheetId)).setEditors(Editors().setUsers(listOf("decryptobot@gmail.com"))))),
+            Request().setUpdateDimensionProperties(UpdateDimensionPropertiesRequest().setRange(DimensionRange().setSheetId(sheetId).setDimension("ROWS").setStartIndex(39).setEndIndex(139)).setProperties(DimensionProperties().setHiddenByUser(true)).setFields("hiddenByUser"))
         )
         val batchUpdateResponse = sheetsService.spreadsheets().batchUpdate(spreadsheetId, batchUpdateRequest).execute()
         println("Batch request: " + batchUpdateResponse)
+        batchUpdateResponse.replies[2].addProtectedRange.protectedRange.protectedRangeId
+    }
 
+    private suspend fun makeSheetPublic(spreadsheetId: String) = withContext(Dispatchers.IO) {
         println("Make public request: " + driveService.Permissions().create(spreadsheetId, Permission().setType("anyone").setRole("writer")).execute())
-
-        return Triple(spreadsheetId, copyResult.sheetId, batchUpdateResponse.replies[2].addProtectedRange.protectedRange.protectedRangeId)
     }
 
     private const val GENERAL_INFO_RANGE = "B70:B73"
@@ -144,7 +157,7 @@ object SheetsClient {
         }
     }
 
-    fun writeGameInfo(spreadsheetId: String, opponentSpreadsheetId: String, guildId: String, channelId: String, color: String, players: List<String>, secretWords: List<String>) {
+    suspend fun writeGameInfo(spreadsheetId: String, opponentSpreadsheetId: String, guildId: String, channelId: String, color: String, players: List<String>, secretWords: List<String>) = withContext(Dispatchers.IO) {
         val (codewordsRange1, codewordsRange2) = getSecretWordsRanges(color)
 
         val data = listOf(
