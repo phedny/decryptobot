@@ -60,7 +60,10 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
         }
 
         val team = newGame.getTeam(event.author.id)
-        SheetsClient.writeRound(newGame, team.rounds.size)
+        SheetsClient.writeRound(newGame, team.roundNumber)
+        if (team.rounds.last().finished) {
+            SheetsClient.setWriteable(team.spreadsheetId, team.sheetId, team.protectedRangeId, "NONE", team.roundNumber, "GUESSES")
+        }
 
         val guildMembers = event.author.mutualGuilds.first { it.id == newGame.guildId }.members.filter { it.id != event.author.id }
         val blackMembers = guildMembers.filter { newGame.black.players.contains(it.id) }

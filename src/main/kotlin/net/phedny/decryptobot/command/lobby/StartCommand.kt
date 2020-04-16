@@ -43,8 +43,8 @@ class StartCommand : Command {
                 }
             }
 
-        val blackSpreadsheetId = SheetsClient.initializeNewSpreadsheet()
-        val whiteSpreadsheetId = SheetsClient.initializeNewSpreadsheet()
+        val (blackSpreadsheetId, blackSheetId, blackProtectedRangeId) = SheetsClient.initializeNewSpreadsheet()
+        val (whiteSpreadsheetId, whiteSheetId, whiteProtectedRangeId) = SheetsClient.initializeNewSpreadsheet()
 
         SheetsClient.writeGameInfo(blackSpreadsheetId, whiteSpreadsheetId, event.guild.id, event.channel.id, "BLACK", lobby.blackPlayers, blackWords)
         SheetsClient.writeGameInfo(whiteSpreadsheetId, blackSpreadsheetId, event.guild.id, event.channel.id, "WHITE", lobby.whitePlayers, whiteWords)
@@ -59,7 +59,7 @@ class StartCommand : Command {
                     "The for secret words for your team are: ${whiteWords.joinToString()}.")
         }
 
-        GameRepository.newGame(event.guild.id, event.channel.id, Team(blackSpreadsheetId, blackWords, lobby.blackPlayers, emptyList()), Team(whiteSpreadsheetId, whiteWords, lobby.whitePlayers, emptyList()))
+        GameRepository.newGame(event.guild.id, event.channel.id, Team(blackSpreadsheetId, blackSheetId, blackProtectedRangeId, blackWords, lobby.blackPlayers, emptyList()), Team(whiteSpreadsheetId, whiteSheetId, whiteProtectedRangeId, whiteWords, lobby.whitePlayers, emptyList()))
         LobbyRepository.removeLobby(event.guild.id, event.channel.id)
 
         spreadsheetsFinished = true

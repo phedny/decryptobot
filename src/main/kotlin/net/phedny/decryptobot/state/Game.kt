@@ -60,6 +60,8 @@ data class Game(
 
 data class Team(
     val spreadsheetId: String,
+    val sheetId: Int,
+    val protectedRangeId: Int,
     val secretWords: List<String>,
     val players: List<String>,
     val rounds: List<Round>

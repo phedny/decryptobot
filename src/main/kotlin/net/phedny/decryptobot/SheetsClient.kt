@@ -75,7 +75,7 @@ object SheetsClient {
         }
     }
 
-    fun initializeNewSpreadsheet(): String {
+    fun initializeNewSpreadsheet(): Triple<String, Int, Int> {
         val spreadsheet = Spreadsheet()
         spreadsheet.properties = SpreadsheetProperties().setTitle("Decrypto game")
         val spreadsheetId = sheetsService.spreadsheets().create(spreadsheet)
@@ -93,14 +93,15 @@ object SheetsClient {
         batchUpdateRequest.requests = listOf(
             Request().setDeleteSheet(DeleteSheetRequest().setSheetId(0)),
             Request().setUpdateSheetProperties(UpdateSheetPropertiesRequest().setProperties(SheetProperties().setSheetId(copyResult.sheetId).setTitle("Decrypto game")).setFields("title")),
-            Request().setAddProtectedRange(AddProtectedRangeRequest().setProtectedRange(ProtectedRange().setDescription("HiddenData").setRange(GridRange().setSheetId(copyResult.sheetId).setStartRowIndex(39).setEndRowIndex(139)).setEditors(Editors().setUsers(listOf("decryptobot@gmail.com"))))),
+            Request().setAddProtectedRange(AddProtectedRangeRequest().setProtectedRange(ProtectedRange().setDescription("SheetProtection").setRange(GridRange().setSheetId(copyResult.sheetId)).setEditors(Editors().setUsers(listOf("decryptobot@gmail.com"))))),
             Request().setUpdateDimensionProperties(UpdateDimensionPropertiesRequest().setRange(DimensionRange().setSheetId(copyResult.sheetId).setDimension("ROWS").setStartIndex(39).setEndIndex(139)).setProperties(DimensionProperties().setHiddenByUser(true)).setFields("hiddenByUser"))
         )
-        println("Batch request: " + sheetsService.spreadsheets().batchUpdate(spreadsheetId, batchUpdateRequest).execute())
+        val batchUpdateResponse = sheetsService.spreadsheets().batchUpdate(spreadsheetId, batchUpdateRequest).execute()
+        println("Batch request: " + batchUpdateResponse)
 
         println("Make public request: " + driveService.Permissions().create(spreadsheetId, Permission().setType("anyone").setRole("writer")).execute())
 
-        return spreadsheetId
+        return Triple(spreadsheetId, copyResult.sheetId, batchUpdateResponse.replies[2].addProtectedRange.protectedRange.protectedRangeId)
     }
 
     private const val GENERAL_INFO_RANGE = "B70:B73"
@@ -250,8 +251,11 @@ object SheetsClient {
         println("players: $players")
 
         val rounds = readRounds(valueRanges, opponentValueRanges, color)
+        val spreadsheet = sheetsService.spreadsheets().get(spreadsheetId).execute()
+        val sheetId = spreadsheet.sheets[0].properties.sheetId
+        val protectedRangeId = spreadsheet.sheets[0].protectedRanges[0].protectedRangeId
 
-        return Team(spreadsheetId, secretWords, players, rounds)
+        return Team(spreadsheetId, sheetId, protectedRangeId, secretWords, players, rounds)
     }
 
     private fun readRounds(valueRanges: List<ValueRange>, opponentValueRanges: List<ValueRange>, color: String): List<Round> =
@@ -285,6 +289,34 @@ object SheetsClient {
 
     private fun readRanges(spreadsheetId: String, ranges: List<String>) = sheetsService.spreadsheets().values().batchGet(spreadsheetId).setRanges(ranges).setValueRenderOption("FORMULA").execute().valueRanges
 
+    fun setWriteable(spreadsheetId: String, sheetId: Int, protectedRangeId: Int, color: String, round: Int, fields: String) {
+        val roundRow = 2 + 5 * ((round - 1) % 4)
+        val roundColumn = 5 * ((round - 1) / 4)
+        val (fieldsStartColumn, fieldsEndColumn) = when (fields) {
+            "HINTS"     -> Pair(1, 3)
+            "GUESSES"   -> Pair(3, 4)
+            else        -> throw IllegalArgumentException("No such fields")
+        }
+
+        val blackGridRange = GridRange().setSheetId(sheetId)
+            .setStartRowIndex(roundRow).setEndRowIndex(roundRow + 3)
+            .setStartColumnIndex(roundColumn + fieldsStartColumn + 11).setEndColumnIndex(roundColumn + fieldsEndColumn + 11)
+        val whiteGridRange = GridRange().setSheetId(sheetId)
+            .setStartRowIndex(roundRow).setEndRowIndex(roundRow + 3)
+            .setStartColumnIndex(roundColumn + fieldsStartColumn).setEndColumnIndex(roundColumn + fieldsEndColumn)
+
+        val writeableGridRanges = listOf(
+            if (color == "BLACK" || color == "BOTH") blackGridRange else null,
+            if (color == "WHITE" || color == "BOTH") whiteGridRange else null
+        ).filterNotNull()
+
+        val batchUpdateRequest = BatchUpdateSpreadsheetRequest()
+        batchUpdateRequest.requests = listOf(
+            Request().setUpdateProtectedRange(UpdateProtectedRangeRequest().setProtectedRange(ProtectedRange().setProtectedRangeId(protectedRangeId).setUnprotectedRanges(writeableGridRanges)).setFields("unprotectedRanges"))
+        )
+
+        println("Update protected range: " + sheetsService.spreadsheets().batchUpdate(spreadsheetId, batchUpdateRequest).execute())
+    }
 }
 
 private fun List<ValueRange>.getByRange(range: String) = this.find { it.range == "'Decrypto game'!$range" }?.getValues()
