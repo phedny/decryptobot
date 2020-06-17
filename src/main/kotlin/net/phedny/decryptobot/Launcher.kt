@@ -41,6 +41,7 @@ class Launcher(private val token: String) {
         .add("hint3", HintNCommand(2))
         .add("hints", HintsCommand())
         .add("hint", HintCommand())
+        .add("undoHints", UndoHintsCommand())
         .add("guessesReady", GuessesReadyCommand())
         .add("guessReady", GuessesReadyCommand())
         .add("guess", GuessCommand())

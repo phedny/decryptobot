@@ -56,6 +56,10 @@ data class Game(
         Pair(TeamColor.WHITE, TeamColor.WHITE)  -> copy(white = white.withTeamGuess(guess))
         else                                    -> this
     }
+    fun withHintsUndone(teamColor: TeamColor): Game = when(teamColor) {
+        TeamColor.BLACK -> copy(black = black.withoutHints())
+        TeamColor.WHITE -> copy(white = white.withoutHints())
+    }
 }
 
 data class Team(
@@ -93,6 +97,7 @@ data class Team(
     fun withHints(hints: List<String>): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withHints(hints)))
     fun withTeamGuess(guess: List<Int>): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withTeamGuess(guess)))
     fun withOpponentGuess(guess: List<Int>): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().withOpponentGuess(guess)))
+    fun withoutHints(): Team = copy(rounds = rounds.dropLast(1).plus(rounds.last().copy(hints = listOf(null, null, null), teamGuess = listOf(null, null, null), opponentGuess = listOf(null, null, null))))
 }
 
 data class Round(

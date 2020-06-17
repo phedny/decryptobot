@@ -60,7 +60,7 @@ abstract class BaseGuessCommand: PrivateMessageCommand {
         }
 
         val team = newGame.getTeam(event.author.id)
-        SheetsClient.writeRound(newGame, team.roundNumber)
+        SheetsClient.writeRound(newGame, team.roundNumber, false, false)
         if (team.rounds.last().finished) {
             SheetsClient.setWriteable(team.spreadsheetId, team.sheetId, team.protectedRangeId, "NONE", team.roundNumber, "GUESSES")
         }
