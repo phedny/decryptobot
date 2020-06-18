@@ -19,8 +19,8 @@ class UndoHintsCommand: PrivateMessageCommand {
         val round = team.rounds.last()
 
         val (newGame, message) = when {
-            team.acceptsEncryptor               -> Pair(game, "Make sure you have an encryptor for this round. Only he/she can undo hints.")
-            event.author.id != round.encryptor  -> Pair(game, "You are not the encryptor of this round. Only he/she can undo hints.")
+            team.acceptsEncryptor               -> Pair(game, "Make sure you have an encryptor for this round. Only they can undo hints.")
+            event.author.id != round.encryptor  -> Pair(game, "You are not the encryptor of this round. Only they can undo hints.")
             else                                -> Pair(game.withHintsUndone(teamColor), "Any hints and guesses for the last round have been undone.")
         }
 
@@ -35,7 +35,7 @@ class UndoHintsCommand: PrivateMessageCommand {
             val hintsAsString = round.hints.joinToString("\n") { "- $it" }
             val guildMembers = event.author.mutualGuilds.first { it.id == game.guildId }.members
             guildMembers.filter { it.id != event.author.id && team.players.contains(it.id) }.forEach {
-                it.send("Apparently your encryptor has messed up. He/she has reset the hints for your team for this round. The original hints were:\n$hintsAsString")
+                it.send("Apparently your encryptor has messed up. They have reset the hints for your team for this round. The original hints were:\n$hintsAsString")
             }
             guildMembers.filter { otherTeam.players.contains(it.id) }.forEach {
                 it.send("The other team has messed up. Their encryptor has reset the hints for their team for this round. Why don't you ask them what happened? The original hints were:\n$hintsAsString")

@@ -200,8 +200,8 @@ object SheetsClient {
 
         val blackTeamGuess = if (overrideBlack) blackRound.teamGuess.map { it ?: "" } else guess(blackRound.teamGuess)
         val blackOpponentGuess = if (overrideBlack) blackRound.opponentGuess.map { it ?: "" } else guess(blackRound.opponentGuess)
-        val whiteTeamGuess = if (overrideBlack) whiteRound.teamGuess.map { it ?: "" } else guess(whiteRound.teamGuess)
-        val whiteOpponentGuess = if (overrideBlack) whiteRound.opponentGuess.map { it ?: "" } else guess(whiteRound.opponentGuess)
+        val whiteTeamGuess = if (overrideWhite) whiteRound.teamGuess.map { it ?: "" } else guess(whiteRound.teamGuess)
+        val whiteOpponentGuess = if (overrideWhite) whiteRound.opponentGuess.map { it ?: "" } else guess(whiteRound.opponentGuess)
 
         writeRound(game.black.spreadsheetId, round, blackHints, whiteHints, blackTeamGuess, whiteOpponentGuess, answer(blackRound.answer), answer(whiteRound.answer))
         writeRound(game.white.spreadsheetId, round, blackHints, whiteHints, blackOpponentGuess, whiteTeamGuess, answer(blackRound.answer), answer(whiteRound.answer))
@@ -209,7 +209,7 @@ object SheetsClient {
 
     fun writeRound(spreadsheetId: String, round: Int, blackHints: List<String?>, whiteHints: List<String?>, blackGuess: List<Any>?, whiteGuess: List<Any>?, blackAnswer: List<Int>?, whiteAnswer: List<Int>?) {
         val blackValues = listOf(
-            blackHints.filterNotNull(),
+            blackHints,
             emptyList(),
             blackGuess ?: emptyList(),
             blackAnswer ?: emptyList()
@@ -217,7 +217,7 @@ object SheetsClient {
         val blackData = ValueRange().setRange(getRoundDataRange("BLACK", round)).setValues(blackValues).setMajorDimension("COLUMNS")
 
         val whiteValues = listOf(
-            whiteHints.filterNotNull(),
+            whiteHints,
             emptyList(),
             whiteGuess ?: emptyList(),
             whiteAnswer ?: emptyList()
