@@ -8,7 +8,7 @@ import net.phedny.decryptobot.state.Words
 
 class DecryptoCommand: Command {
     override fun execute(event: GuildMessageReceivedEvent, prefix:String) {
-        val members = event.channel.members.filter { !it.user.isBot }.shuffled().map { it.asMention }.chunked(2)
+        val members = event.channel.members.filter { !it.user.isBot }.shuffled().map { "@${it.effectiveName}" }.chunked(2)
         val wordLists = Words.wordLists
 
         event.channel.send("**Welcome to play a game of Decrypto!** :game_die:\n\n" +
