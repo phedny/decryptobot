@@ -36,6 +36,7 @@ class Launcher(private val token: String) {
             // Game commands
         .add("encrypt", EncryptCommand())
         .add("hintsReady", HintsReadyCommand())
+        .add("hr", HintsReadyCommand())
         .add("hint1", HintNCommand(0))
         .add("hint2", HintNCommand(1))
         .add("hint3", HintNCommand(2))
@@ -44,6 +45,7 @@ class Launcher(private val token: String) {
         .add("undoHints", UndoHintsCommand())
         .add("guessesReady", GuessesReadyCommand())
         .add("guessReady", GuessesReadyCommand())
+        .add("gr", GuessesReadyCommand())
         .add("guess", GuessCommand())
 
         .build()
