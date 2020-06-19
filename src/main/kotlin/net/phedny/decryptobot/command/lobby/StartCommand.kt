@@ -5,14 +5,14 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent
 import net.phedny.decryptobot.SheetsClient
-import net.phedny.decryptobot.command.Command
+import net.phedny.decryptobot.command.GuildMessageCommand
 import net.phedny.decryptobot.extensions.send
 import net.phedny.decryptobot.state.GameRepository
 import net.phedny.decryptobot.state.LobbyRepository
 import net.phedny.decryptobot.state.Team
 import net.phedny.decryptobot.state.Words
 
-class StartCommand : Command {
+class StartCommand : GuildMessageCommand {
     override fun execute(event: GuildMessageReceivedEvent, prefix:String) {
         val lobby = LobbyRepository.getLobby(event.guild.id, event.channel.id)
             ?: return event.channel.send("I'm not activated in this channel. Want to prepare a Decrypto team? First activate me using the `!decrypto` command :+1:")

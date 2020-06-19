@@ -42,7 +42,7 @@ class PrivateHelpCommand:PrivateMessageCommand {
     }
 }
 
-class PublicHelpCommand:Command {
+class PublicHelpCommand:GuildMessageCommand {
     override fun execute(event: GuildMessageReceivedEvent, prefix: String) {
         sendHelp(event.channel)
     }

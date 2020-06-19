@@ -3,11 +3,11 @@ package net.phedny.decryptobot.command.lobby
 import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent
 import net.phedny.decryptobot.SheetsClient
-import net.phedny.decryptobot.command.Command
+import net.phedny.decryptobot.command.GuildMessageCommand
 import net.phedny.decryptobot.extensions.send
 import net.phedny.decryptobot.state.GameRepository
 
-class ContinueCommand() : Command {
+class ContinueCommand() : GuildMessageCommand {
     override fun execute(event: GuildMessageReceivedEvent, prefix:String) {
         val spreadsheetId = Regex("docs.google.com/spreadsheets/d/([\\w-]+)").find(event.message.contentRaw)?.groupValues?.get(1)
         if (spreadsheetId?.isNotEmpty() == true) {
